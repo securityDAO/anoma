@@ -39,13 +39,13 @@ steps:
         echo "f01f320575fbbbd3d0ba0f2dd7e9b0132e8448e4e07ce99d425d9ad03d811428 
         docs/Makefile" | sha256sum -c -
       - >-
-        echo "1f7193a7d75f6ee0b5ad4f067f0974873de6c52942e79d0559b58fb8a140c083 
+        echo "7dd312b1ce11d7e51583d4281833f64599bdc991a8cb5780c75f2f1188a24257 
         scripts/ci/pre-run.sh" | sha256sum -c -
       - >-
-        echo "5790acb842cd5d1dc0120e4258f30f796de7cd44ac775d836e40eec9a16bea28 
+        echo "bbf66c628d4916b5c931997968afdf2cc85b4362d731d9e47152627e59cfd0f2 
         scripts/ci/release.sh" | sha256sum -c -
       - >-
-        echo "22083f12f97de4455bc87e00ad5df8ec969e4015f80f696f3c03c3c08b1b4b41 
+        echo "404295040e689276676d7f33ade9abbd09f36a7120a3389887de1d47f8895dfe 
         scripts/ci/build-and-publish-docs.sh" | sha256sum -c -
       - >-
         echo "19ab6263cc481222b4ecedd1037d2942e4b93d915693aad153bec2a80977ce3d 
@@ -184,13 +184,13 @@ steps:
         echo "f01f320575fbbbd3d0ba0f2dd7e9b0132e8448e4e07ce99d425d9ad03d811428 
         docs/Makefile" | sha256sum -c -
       - >-
-        echo "1f7193a7d75f6ee0b5ad4f067f0974873de6c52942e79d0559b58fb8a140c083 
+        echo "7dd312b1ce11d7e51583d4281833f64599bdc991a8cb5780c75f2f1188a24257 
         scripts/ci/pre-run.sh" | sha256sum -c -
       - >-
-        echo "5790acb842cd5d1dc0120e4258f30f796de7cd44ac775d836e40eec9a16bea28 
+        echo "bbf66c628d4916b5c931997968afdf2cc85b4362d731d9e47152627e59cfd0f2 
         scripts/ci/release.sh" | sha256sum -c -
       - >-
-        echo "22083f12f97de4455bc87e00ad5df8ec969e4015f80f696f3c03c3c08b1b4b41 
+        echo "404295040e689276676d7f33ade9abbd09f36a7120a3389887de1d47f8895dfe 
         scripts/ci/build-and-publish-docs.sh" | sha256sum -c -
       - >-
         echo "19ab6263cc481222b4ecedd1037d2942e4b93d915693aad153bec2a80977ce3d 
@@ -288,13 +288,13 @@ steps:
         echo "f01f320575fbbbd3d0ba0f2dd7e9b0132e8448e4e07ce99d425d9ad03d811428 
         docs/Makefile" | sha256sum -c -
       - >-
-        echo "1f7193a7d75f6ee0b5ad4f067f0974873de6c52942e79d0559b58fb8a140c083 
+        echo "7dd312b1ce11d7e51583d4281833f64599bdc991a8cb5780c75f2f1188a24257 
         scripts/ci/pre-run.sh" | sha256sum -c -
       - >-
-        echo "5790acb842cd5d1dc0120e4258f30f796de7cd44ac775d836e40eec9a16bea28 
+        echo "bbf66c628d4916b5c931997968afdf2cc85b4362d731d9e47152627e59cfd0f2 
         scripts/ci/release.sh" | sha256sum -c -
       - >-
-        echo "22083f12f97de4455bc87e00ad5df8ec969e4015f80f696f3c03c3c08b1b4b41 
+        echo "404295040e689276676d7f33ade9abbd09f36a7120a3389887de1d47f8895dfe 
         scripts/ci/build-and-publish-docs.sh" | sha256sum -c -
       - >-
         echo "19ab6263cc481222b4ecedd1037d2942e4b93d915693aad153bec2a80977ce3d 
@@ -462,13 +462,13 @@ steps:
         echo "f01f320575fbbbd3d0ba0f2dd7e9b0132e8448e4e07ce99d425d9ad03d811428 
         docs/Makefile" | sha256sum -c -
       - >-
-        echo "1f7193a7d75f6ee0b5ad4f067f0974873de6c52942e79d0559b58fb8a140c083 
+        echo "7dd312b1ce11d7e51583d4281833f64599bdc991a8cb5780c75f2f1188a24257 
         scripts/ci/pre-run.sh" | sha256sum -c -
       - >-
-        echo "5790acb842cd5d1dc0120e4258f30f796de7cd44ac775d836e40eec9a16bea28 
+        echo "bbf66c628d4916b5c931997968afdf2cc85b4362d731d9e47152627e59cfd0f2 
         scripts/ci/release.sh" | sha256sum -c -
       - >-
-        echo "22083f12f97de4455bc87e00ad5df8ec969e4015f80f696f3c03c3c08b1b4b41 
+        echo "404295040e689276676d7f33ade9abbd09f36a7120a3389887de1d47f8895dfe 
         scripts/ci/build-and-publish-docs.sh" | sha256sum -c -
       - >-
         echo "19ab6263cc481222b4ecedd1037d2942e4b93d915693aad153bec2a80977ce3d 
@@ -549,13 +549,13 @@ steps:
         echo "f01f320575fbbbd3d0ba0f2dd7e9b0132e8448e4e07ce99d425d9ad03d811428 
         docs/Makefile" | sha256sum -c -
       - >-
-        echo "1f7193a7d75f6ee0b5ad4f067f0974873de6c52942e79d0559b58fb8a140c083 
+        echo "7dd312b1ce11d7e51583d4281833f64599bdc991a8cb5780c75f2f1188a24257 
         scripts/ci/pre-run.sh" | sha256sum -c -
       - >-
-        echo "5790acb842cd5d1dc0120e4258f30f796de7cd44ac775d836e40eec9a16bea28 
+        echo "bbf66c628d4916b5c931997968afdf2cc85b4362d731d9e47152627e59cfd0f2 
         scripts/ci/release.sh" | sha256sum -c -
       - >-
-        echo "22083f12f97de4455bc87e00ad5df8ec969e4015f80f696f3c03c3c08b1b4b41 
+        echo "404295040e689276676d7f33ade9abbd09f36a7120a3389887de1d47f8895dfe 
         scripts/ci/build-and-publish-docs.sh" | sha256sum -c -
       - >-
         echo "19ab6263cc481222b4ecedd1037d2942e4b93d915693aad153bec2a80977ce3d 
@@ -654,13 +654,13 @@ steps:
         echo "f01f320575fbbbd3d0ba0f2dd7e9b0132e8448e4e07ce99d425d9ad03d811428 
         docs/Makefile" | sha256sum -c -
       - >-
-        echo "1f7193a7d75f6ee0b5ad4f067f0974873de6c52942e79d0559b58fb8a140c083 
+        echo "7dd312b1ce11d7e51583d4281833f64599bdc991a8cb5780c75f2f1188a24257 
         scripts/ci/pre-run.sh" | sha256sum -c -
       - >-
-        echo "5790acb842cd5d1dc0120e4258f30f796de7cd44ac775d836e40eec9a16bea28 
+        echo "bbf66c628d4916b5c931997968afdf2cc85b4362d731d9e47152627e59cfd0f2 
         scripts/ci/release.sh" | sha256sum -c -
       - >-
-        echo "22083f12f97de4455bc87e00ad5df8ec969e4015f80f696f3c03c3c08b1b4b41 
+        echo "404295040e689276676d7f33ade9abbd09f36a7120a3389887de1d47f8895dfe 
         scripts/ci/build-and-publish-docs.sh" | sha256sum -c -
       - >-
         echo "19ab6263cc481222b4ecedd1037d2942e4b93d915693aad153bec2a80977ce3d 
@@ -741,13 +741,13 @@ steps:
         echo "f01f320575fbbbd3d0ba0f2dd7e9b0132e8448e4e07ce99d425d9ad03d811428 
         docs/Makefile" | sha256sum -c -
       - >-
-        echo "1f7193a7d75f6ee0b5ad4f067f0974873de6c52942e79d0559b58fb8a140c083 
+        echo "7dd312b1ce11d7e51583d4281833f64599bdc991a8cb5780c75f2f1188a24257 
         scripts/ci/pre-run.sh" | sha256sum -c -
       - >-
-        echo "5790acb842cd5d1dc0120e4258f30f796de7cd44ac775d836e40eec9a16bea28 
+        echo "bbf66c628d4916b5c931997968afdf2cc85b4362d731d9e47152627e59cfd0f2 
         scripts/ci/release.sh" | sha256sum -c -
       - >-
-        echo "22083f12f97de4455bc87e00ad5df8ec969e4015f80f696f3c03c3c08b1b4b41 
+        echo "404295040e689276676d7f33ade9abbd09f36a7120a3389887de1d47f8895dfe 
         scripts/ci/build-and-publish-docs.sh" | sha256sum -c -
       - >-
         echo "19ab6263cc481222b4ecedd1037d2942e4b93d915693aad153bec2a80977ce3d 
@@ -830,13 +830,13 @@ steps:
         echo "f01f320575fbbbd3d0ba0f2dd7e9b0132e8448e4e07ce99d425d9ad03d811428 
         docs/Makefile" | sha256sum -c -
       - >-
-        echo "1f7193a7d75f6ee0b5ad4f067f0974873de6c52942e79d0559b58fb8a140c083 
+        echo "7dd312b1ce11d7e51583d4281833f64599bdc991a8cb5780c75f2f1188a24257 
         scripts/ci/pre-run.sh" | sha256sum -c -
       - >-
-        echo "5790acb842cd5d1dc0120e4258f30f796de7cd44ac775d836e40eec9a16bea28 
+        echo "bbf66c628d4916b5c931997968afdf2cc85b4362d731d9e47152627e59cfd0f2 
         scripts/ci/release.sh" | sha256sum -c -
       - >-
-        echo "22083f12f97de4455bc87e00ad5df8ec969e4015f80f696f3c03c3c08b1b4b41 
+        echo "404295040e689276676d7f33ade9abbd09f36a7120a3389887de1d47f8895dfe 
         scripts/ci/build-and-publish-docs.sh" | sha256sum -c -
       - >-
         echo "19ab6263cc481222b4ecedd1037d2942e4b93d915693aad153bec2a80977ce3d 
@@ -976,13 +976,13 @@ steps:
         echo "f01f320575fbbbd3d0ba0f2dd7e9b0132e8448e4e07ce99d425d9ad03d811428 
         docs/Makefile" | sha256sum -c -
       - >-
-        echo "1f7193a7d75f6ee0b5ad4f067f0974873de6c52942e79d0559b58fb8a140c083 
+        echo "7dd312b1ce11d7e51583d4281833f64599bdc991a8cb5780c75f2f1188a24257 
         scripts/ci/pre-run.sh" | sha256sum -c -
       - >-
-        echo "5790acb842cd5d1dc0120e4258f30f796de7cd44ac775d836e40eec9a16bea28 
+        echo "bbf66c628d4916b5c931997968afdf2cc85b4362d731d9e47152627e59cfd0f2 
         scripts/ci/release.sh" | sha256sum -c -
       - >-
-        echo "22083f12f97de4455bc87e00ad5df8ec969e4015f80f696f3c03c3c08b1b4b41 
+        echo "404295040e689276676d7f33ade9abbd09f36a7120a3389887de1d47f8895dfe 
         scripts/ci/build-and-publish-docs.sh" | sha256sum -c -
       - >-
         echo "19ab6263cc481222b4ecedd1037d2942e4b93d915693aad153bec2a80977ce3d 
@@ -1174,13 +1174,13 @@ steps:
         echo "f01f320575fbbbd3d0ba0f2dd7e9b0132e8448e4e07ce99d425d9ad03d811428 
         docs/Makefile" | sha256sum -c -
       - >-
-        echo "1f7193a7d75f6ee0b5ad4f067f0974873de6c52942e79d0559b58fb8a140c083 
+        echo "7dd312b1ce11d7e51583d4281833f64599bdc991a8cb5780c75f2f1188a24257 
         scripts/ci/pre-run.sh" | sha256sum -c -
       - >-
-        echo "5790acb842cd5d1dc0120e4258f30f796de7cd44ac775d836e40eec9a16bea28 
+        echo "bbf66c628d4916b5c931997968afdf2cc85b4362d731d9e47152627e59cfd0f2 
         scripts/ci/release.sh" | sha256sum -c -
       - >-
-        echo "22083f12f97de4455bc87e00ad5df8ec969e4015f80f696f3c03c3c08b1b4b41 
+        echo "404295040e689276676d7f33ade9abbd09f36a7120a3389887de1d47f8895dfe 
         scripts/ci/build-and-publish-docs.sh" | sha256sum -c -
       - >-
         echo "19ab6263cc481222b4ecedd1037d2942e4b93d915693aad153bec2a80977ce3d 
@@ -1247,6 +1247,6 @@ workspace:
   path: /usr/local/rust/project
 ---
 kind: signature
-hmac: acd003dd0f1c8046c70f2e3ed094c20221ff6330b2b71efe4a325c540d6bc886
+hmac: 730129568d7c96991ed3d5caafc59848168e42aee2e9b29a48093b734a63007d
 
 ...
