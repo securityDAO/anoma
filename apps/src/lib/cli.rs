@@ -1113,6 +1113,7 @@ pub mod args {
     const DATA_PATH_OPT: ArgOpt<PathBuf> = arg_opt("data-path");
     const DATA_PATH: Arg<PathBuf> = arg("data-path");
     const DECRYPT: ArgFlag = flag("decrypt");
+    const DONT_ARCHIVE: ArgFlag = flag("dont-archive");
     const DRY_RUN_TX: ArgFlag = flag("dry-run");
     const EPOCH: ArgOpt<Epoch> = arg_opt("epoch");
     const FILTER_PATH: ArgOpt<PathBuf> = arg_opt("filter-path");
@@ -2257,6 +2258,7 @@ pub mod args {
         pub consensus_timeout_commit: tendermint::Timeout,
         pub localhost: bool,
         pub allow_duplicate_ip: bool,
+        pub dont_archive: bool,
     }
 
     impl Args for InitNetwork {
@@ -2268,6 +2270,7 @@ pub mod args {
                 CONSENSUS_TIMEOUT_COMMIT.parse(matches);
             let localhost = LOCALHOST.parse(matches);
             let allow_duplicate_ip = ALLOW_DUPLICATE_IP.parse(matches);
+            let dont_archive = DONT_ARCHIVE.parse(matches);
             Self {
                 genesis_path,
                 chain_id_prefix,
@@ -2275,6 +2278,7 @@ pub mod args {
                 consensus_timeout_commit,
                 localhost,
                 allow_duplicate_ip,
+                dont_archive,
             }
         }
 
@@ -2304,6 +2308,11 @@ pub mod args {
                 "Toggle to disable guard against peers connecting from the \
                  same IP. This option shouldn't be used in mainnet.",
             ))
+            .arg(
+                DONT_ARCHIVE
+                    .def()
+                    .about("Do NOT create the release archive."),
+            )
         }
     }
 
