@@ -5979,7 +5979,7 @@ dependencies = [
 [[package]]
 name = "tower-abci"
 version = "0.1.0"
-source = "git+https://github.com/heliaxdev/tower-abci?branch=tomas/log-service-errors-and-dont-panic#09a47f0610bc48dcf302a5ea1f117fe0f1388023"
+source = "git+https://github.com/heliaxdev/tower-abci?branch=tomas/fix-shutdown#fb16d08a30c778a1533796ed8d18bb5732f3f614"
 dependencies = [
  "bytes 1.1.0",
  "futures 0.3.17",

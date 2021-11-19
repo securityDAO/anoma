@@ -99,7 +99,7 @@ tonic = "0.5.0"
 tower = "0.4"
 # Also, using the same version of tendermint-rs as we do here,
 # with a patch for https://github.com/penumbra-zone/tower-abci/issues/7.
-tower-abci = {git = "https://github.com/heliaxdev/tower-abci", branch = "tomas/log-service-errors-and-dont-panic"}
+tower-abci = {git = "https://github.com/heliaxdev/tower-abci", branch = "tomas/fix-shutdown"}
 tracing = "0.1.26"
 tracing-log = "0.1.2"
 tracing-subscriber = "0.2.18"
