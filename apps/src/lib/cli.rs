@@ -1113,6 +1113,7 @@ pub mod args {
     const DATA_PATH_OPT: ArgOpt<PathBuf> = arg_opt("data-path");
     const DATA_PATH: Arg<PathBuf> = arg("data-path");
     const DECRYPT: ArgFlag = flag("decrypt");
+    const DONT_ARCHIVE: ArgFlag = flag("dont-archive");
     const DRY_RUN_TX: ArgFlag = flag("dry-run");
     const EPOCH: ArgOpt<Epoch> = arg_opt("epoch");
     const FILTER_PATH: ArgOpt<PathBuf> = arg_opt("filter-path");
@@ -1165,6 +1166,7 @@ pub mod args {
         arg_opt("consensus-key");
     const VALIDATOR_CODE_PATH: ArgOpt<PathBuf> = arg_opt("validator-code-path");
     const VALUE: ArgOpt<String> = arg_opt("value");
+    const WASM_CHECKSUMS_PATH: Arg<PathBuf> = arg("wasm-checksums-path");
     const WASM_DIR: ArgOpt<PathBuf> = arg_opt("wasm-dir");
 
     /// Global command arguments
@@ -2252,29 +2254,35 @@ pub mod args {
     #[derive(Clone, Debug)]
     pub struct InitNetwork {
         pub genesis_path: PathBuf,
+        pub wasm_checksums_path: PathBuf,
         pub chain_id_prefix: ChainIdPrefix,
         pub unsafe_dont_encrypt: bool,
         pub consensus_timeout_commit: tendermint::Timeout,
         pub localhost: bool,
         pub allow_duplicate_ip: bool,
+        pub dont_archive: bool,
     }
 
     impl Args for InitNetwork {
         fn parse(matches: &ArgMatches) -> Self {
             let genesis_path = GENESIS_PATH.parse(matches);
+            let wasm_checksums_path = WASM_CHECKSUMS_PATH.parse(matches);
             let chain_id_prefix = CHAIN_ID_PREFIX.parse(matches);
             let unsafe_dont_encrypt = UNSAFE_DONT_ENCRYPT.parse(matches);
             let consensus_timeout_commit =
                 CONSENSUS_TIMEOUT_COMMIT.parse(matches);
             let localhost = LOCALHOST.parse(matches);
             let allow_duplicate_ip = ALLOW_DUPLICATE_IP.parse(matches);
+            let dont_archive = DONT_ARCHIVE.parse(matches);
             Self {
                 genesis_path,
+                wasm_checksums_path,
                 chain_id_prefix,
                 unsafe_dont_encrypt,
                 consensus_timeout_commit,
                 localhost,
                 allow_duplicate_ip,
+                dont_archive,
             }
         }
 
@@ -2283,6 +2291,11 @@ pub mod args {
                 GENESIS_PATH.def().about(
                     "Path to the preliminary genesis configuration file.",
                 ),
+            )
+            .arg(
+                WASM_CHECKSUMS_PATH
+                    .def()
+                    .about("Path to the WASM checksums file."),
             )
             .arg(CHAIN_ID_PREFIX.def().about(
                 "The chain ID prefix. Up to 19 alphanumeric, '.', '-' or '_' \
@@ -2304,6 +2317,11 @@ pub mod args {
                 "Toggle to disable guard against peers connecting from the \
                  same IP. This option shouldn't be used in mainnet.",
             ))
+            .arg(
+                DONT_ARCHIVE
+                    .def()
+                    .about("Do NOT create the release archive."),
+            )
         }
     }
 
