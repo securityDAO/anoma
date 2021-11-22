@@ -183,6 +183,11 @@ pub fn run(config: config::Ledger, wasm_dir: PathBuf) {
         .block_on(run_aux(config, wasm_dir));
 }
 
+/// Rollback the state to the predecessor block height.
+pub fn rollback(config: config::Ledger) -> Result<(), shell::Error> {
+    shell::rollback(config)
+}
+
 /// Resets the tendermint_node state and removes database files
 pub fn reset(config: config::Ledger) -> Result<(), shell::Error> {
     shell::reset(config)
