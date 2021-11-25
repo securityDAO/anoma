@@ -79,11 +79,11 @@ sparse-merkle-tree = {git = "https://github.com/heliaxdev/sparse-merkle-tree", b
 tendermint = {git = "https://github.com/heliaxdev/tendermint-rs", branch = "tomas/lowercase-node-id"}
 thiserror = "1.0.26"
 tracing = "0.1.26"
-wasmer = {version = "2.0.0", optional = true}
-wasmer-compiler-cranelift = {version = "2.0.0", optional = true}
-wasmer-compiler-singlepass = {version = "2.0.0", optional = true}
-wasmer-engine-universal = {version = "2.0.0", optional = true}
-wasmer-vm = {version = "2.0.0", optional = true}
+wasmer = {git = "https://github.com/wasmerio/wasmer", branch = "rm-funcref-registry", optional = true}
+wasmer-compiler-cranelift = {git = "https://github.com/wasmerio/wasmer", branch = "rm-funcref-registry", optional = true}
+wasmer-compiler-singlepass = {git = "https://github.com/wasmerio/wasmer", branch = "rm-funcref-registry", optional = true}
+wasmer-engine-universal = {git = "https://github.com/wasmerio/wasmer", branch = "rm-funcref-registry", optional = true}
+wasmer-vm = {git = "https://github.com/wasmerio/wasmer", branch = "rm-funcref-registry", optional = true}
 wasmparser = "0.79.0"
 
 [dev-dependencies]
