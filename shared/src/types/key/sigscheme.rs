@@ -16,7 +16,10 @@ use crate::types::storage::Key;
 
 /// A value-to-value conversion that consumes the input value.
 
-pub trait IntoRef<T> where T: ?Sized {
+pub trait IntoRef<T>
+where
+    T: ?Sized,
+{
     /// Performs the conversion.
     fn into_ref<'a>(&self, slc: &'a mut T) -> &'a mut T;
 }
@@ -24,7 +27,10 @@ pub trait IntoRef<T> where T: ?Sized {
 /// Simple and safe type conversions that may fail in a controlled
 /// way under some circumstances.
 
-pub trait TryFromRef<T> : Sized where T: ?Sized {
+pub trait TryFromRef<T>: Sized
+where
+    T: ?Sized,
+{
     /// The type returned in the event of a conversion error.
     type Error;
     /// Performs the conversion.
@@ -38,29 +44,35 @@ pub trait TryFromRef<T> : Sized where T: ?Sized {
 
 pub trait SigScheme {
     /// Represents the signature for this scheme
-    type Signature : Hash + PartialOrd + AsRef<[u8]> + ed25519_dalek::ed25519::signature::Signature;
+    type Signature: Hash
+        + PartialOrd
+        + AsRef<[u8]>
+        + ed25519_dalek::ed25519::signature::Signature;
     /// Represents the public key for this scheme
-    type PublicKey : BorshSerialize + BorshDeserialize + Ord + Display +
-        FromStr + PartialOrd + Hash;
+    type PublicKey: BorshSerialize
+        + BorshDeserialize
+        + Ord
+        + Display
+        + FromStr
+        + PartialOrd
+        + Hash;
     /// Represents the secret key for this scheme
-    type SecretKey : BorshSerialize + BorshDeserialize + Display + FromStr;
+    type SecretKey: BorshSerialize + BorshDeserialize + Display + FromStr;
     /// Represents the keypair for this scheme
-    type Keypair : Display + FromStr + IntoRef<[u8]> + TryFromRef<[u8]>;
+    type Keypair: Display + FromStr + IntoRef<[u8]> + TryFromRef<[u8]>;
     /// Represents an error in signature verification
     type VerifyError;
     /// The length of Keypairs in bytes
     const KEYPAIR_LENGTH: usize;
-    /// Obtain a storage key for user's public key.
-    fn pk_key(owner: &Address) -> Key;
-    /// Check if the given storage key is a public key. If it is, returns the owner.
-    fn is_pk_key(key: &Key) -> Option<&Address>;
     /// Generate an ed25519 keypair.
     /// Wrapper for [`ed25519_dalek::Keypair::generate`].
     #[cfg(feature = "rand")]
     fn generate<R>(csprng: &mut R) -> Self::Keypair
-    where R: CryptoRng + RngCore;
+    where
+        R: CryptoRng + RngCore;
     /// Sign the data with a key.
-    fn sign(keypair: &Self::Keypair, data: impl AsRef<[u8]>) -> Self::Signature;
+    fn sign(keypair: &Self::Keypair, data: impl AsRef<[u8]>)
+    -> Self::Signature;
     /// Check that the public key matches the signature on the given data.
     fn verify_signature<T: BorshSerialize + BorshDeserialize>(
         pk: &Self::PublicKey,
@@ -121,9 +133,10 @@ where
     }
 }
 
-impl<S, T> Eq for Signed<S, T> where
+impl<S, T> Eq for Signed<S, T>
+where
     S: SigScheme,
-    T: BorshSerialize + BorshDeserialize + Eq + PartialEq
+    T: BorshSerialize + BorshDeserialize + Eq + PartialEq,
 {
 }
 
@@ -172,4 +185,3 @@ where
         S::verify_signature_raw(pk, &bytes, &self.sig)
     }
 }
-

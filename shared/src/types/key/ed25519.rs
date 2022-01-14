@@ -17,8 +17,10 @@ use thiserror::Error;
 
 use crate::proto::Tx;
 use crate::types::address::{self, Address};
+use crate::types::key::sigscheme::{
+    IntoRef, SigScheme, SignedTxData, TryFromRef,
+};
 use crate::types::storage::{DbKeySeg, Key, KeySeg};
-use crate::types::key::sigscheme::{SigScheme, TryFromRef, IntoRef, SignedTxData};
 
 const SIGNATURE_LEN: usize = ed25519_dalek::SIGNATURE_LENGTH;
 
@@ -61,7 +63,6 @@ pub struct Signature(ed25519_dalek::Signature);
 pub struct PublicKeyHash(pub(crate) String);
 
 const PKH_HASH_LEN: usize = address::HASH_LEN;
-const PK_STORAGE_KEY: &str = "ed25519_pk";
 
 #[allow(missing_docs)]
 #[derive(Error, Debug)]
@@ -87,6 +88,7 @@ impl IntoRef<[u8]> for Keypair {
 
 impl TryFromRef<[u8]> for Keypair {
     type Error = SignatureError;
+
     /// Construct a `Keypair` from the bytes of a `PublicKey` and `SecretKey`.
     /// Wrapper for [`ed25519_dalek::Keypair::from_bytes`].
     fn try_from_ref(bytes: &[u8]) -> Result<Keypair, SignatureError> {
@@ -512,30 +514,13 @@ impl ed25519_dalek::ed25519::signature::Signature for Signature {
 pub struct Ed25519Scheme;
 
 impl SigScheme for Ed25519Scheme {
-    type Signature = Signature;
+    type Keypair = Keypair;
     type PublicKey = PublicKey;
     type SecretKey = SecretKey;
-    type Keypair = Keypair;
+    type Signature = Signature;
     type VerifyError = VerifySigError;
 
-    const KEYPAIR_LENGTH:usize = ed25519_dalek::KEYPAIR_LENGTH;
-
-    fn pk_key(owner: &Address) -> Key {
-        Key::from(owner.to_db_key())
-            .push(&PK_STORAGE_KEY.to_owned())
-            .expect("Cannot obtain a storage key")
-    }
-
-    fn is_pk_key(key: &Key) -> Option<&Address> {
-        match &key.segments[..] {
-            [DbKeySeg::AddressSeg(owner), DbKeySeg::StringSeg(key)]
-                if key == PK_STORAGE_KEY =>
-            {
-                Some(owner)
-            }
-            _ => None,
-        }
-    }
+    const KEYPAIR_LENGTH: usize = ed25519_dalek::KEYPAIR_LENGTH;
 
     #[cfg(feature = "rand")]
     fn generate<R>(csprng: &mut R) -> Keypair
@@ -597,7 +582,7 @@ impl SigScheme for Ed25519Scheme {
             timestamp: tx.timestamp,
         };
         let signed_data = tx.to_bytes();
-       Self:: verify_signature_raw(pk, &signed_data, sig)
+        Self::verify_signature_raw(pk, &signed_data, sig)
     }
 }
 
@@ -610,7 +595,10 @@ fn gen_keypair() {
 
     let mut rng: ThreadRng = thread_rng();
     let keypair = Ed25519Scheme::generate(&mut rng);
-    println!("keypair {:?}", keypair.into_ref(&mut [0; Ed25519Scheme::KEYPAIR_LENGTH]));
+    println!(
+        "keypair {:?}",
+        keypair.into_ref(&mut [0; Ed25519Scheme::KEYPAIR_LENGTH])
+    );
 }
 
 /// Helpers for testing with keys.
