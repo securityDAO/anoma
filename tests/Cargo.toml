@@ -12,12 +12,16 @@ default = ["wasm-runtime", "ABCI"]
 wasm-runtime = ["anoma/wasm-runtime"]
 
 ABCI = [
+  "tendermint-config-abci",
+  "tendermint-rpc-abci",
   "anoma/ABCI",
   "anoma/ibc-mocks-abci",
   "anoma_vm_env/ABCI",
 ]
 
 ABCI-plus-plus = [
+  "tendermint-config",
+  "tendermint-rpc",
   "anoma/ABCI-plus-plus",
   "anoma/ibc-mocks",
   "anoma_vm_env/ABCI-plus-plus",
@@ -33,6 +37,12 @@ serde_json = {version = "1.0.65"}
 sha2 = "0.9.3"
 test-log = {version = "0.2.7", default-features = false, features = ["trace"]}
 tempfile = "3.2.0"
+# temporarily using fork work-around
+tendermint-config = {git = "https://github.com/heliaxdev/tendermint-rs", branch = "yuji/abcipp-v0.23.5", optional = true}
+tendermint-config-abci = {package = "tendermint-config", git = "https://github.com/heliaxdev/tendermint-rs", branch = "yuji/rebase_v0.23.5", optional = true}
+tendermint-rpc = {git = "https://github.com/heliaxdev/tendermint-rs", branch = "yuji/abcipp-v0.23.5", optional = true, features = ["http-client", "websocket-client"]}
+tendermint-rpc-abci = {package = "tendermint-rpc", git = "https://github.com/heliaxdev/tendermint-rs", branch = "yuji/rebase_v0.23.5", optional = true, features = ["http-client", "websocket-client"]}
+tokio = {version = "1.8.2", features = ["full"]}
 tracing = "0.1.30"
 tracing-subscriber = {version = "0.3.7", default-features = false, features = ["env-filter", "fmt"]}
 
