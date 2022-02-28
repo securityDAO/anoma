@@ -308,7 +308,18 @@ pub enum SlashType {
 
 /// ‱ (Parts per ten thousand). This can be multiplied by any type that
 /// implements [`Into<u64>`] or [`Into<i128>`].
-#[derive(Debug, Clone, Copy, BorshDeserialize, BorshSerialize)]
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialOrd,
+    Ord,
+    PartialEq,
+    Eq,
+    Hash,
+)]
 pub struct BasisPoints(u64);
 
 impl VotingPower {
