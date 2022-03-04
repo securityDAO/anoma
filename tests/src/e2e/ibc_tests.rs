@@ -1,175 +1,88 @@
+//! By default, these tests will run in release mode. This can be disabled
+//! by setting environment variable `ANOMA_E2E_DEBUG=true`. For debugging,
+//! you'll typically also want to set `RUST_BACKTRACE=1`, e.g.:
+//!
+//! ```ignore,shell
+//! ANOMA_E2E_DEBUG=true RUST_BACKTRACE=1 cargo test e2e::ibc_tests -- --test-threads=1 --nocapture
+//! ```
+//!
+//! To keep the temporary files created by a test, use env var
+//! `ANOMA_E2E_KEEP_TEMP=true`.
+
 use core::convert::TryFrom;
 use core::str::FromStr;
 use core::time::Duration;
 
+use anoma::ibc::applications::ics20_fungible_token_transfer::msgs::transfer::MsgTransfer;
+use anoma::ibc::clients::ics07_tendermint::client_state::{
+    AllowUpdate, ClientState as TmClientState,
+};
+use anoma::ibc::clients::ics07_tendermint::consensus_state::ConsensusState as TmConsensusState;
+use anoma::ibc::core::ics02_client::client_consensus::{
+    AnyConsensusState, ConsensusState,
+};
+use anoma::ibc::core::ics02_client::client_state::{
+    AnyClientState, ClientState,
+};
+use anoma::ibc::core::ics02_client::height::Height;
+use anoma::ibc::core::ics02_client::msgs::create_client::MsgCreateAnyClient;
+use anoma::ibc::core::ics02_client::trust_threshold::TrustThreshold;
+use anoma::ibc::core::ics03_connection::connection::Counterparty as ConnCounterparty;
+use anoma::ibc::core::ics03_connection::msgs::conn_open_ack::MsgConnectionOpenAck;
+use anoma::ibc::core::ics03_connection::msgs::conn_open_confirm::MsgConnectionOpenConfirm;
+use anoma::ibc::core::ics03_connection::msgs::conn_open_init::MsgConnectionOpenInit;
+use anoma::ibc::core::ics03_connection::msgs::conn_open_try::MsgConnectionOpenTry;
+use anoma::ibc::core::ics03_connection::version::Version as ConnVersion;
+use anoma::ibc::core::ics04_channel::channel::{
+    ChannelEnd, Counterparty as ChanCounterparty, Order as ChanOrder,
+    State as ChanState,
+};
+use anoma::ibc::core::ics04_channel::msgs::acknowledgement::MsgAcknowledgement;
+use anoma::ibc::core::ics04_channel::msgs::chan_open_ack::MsgChannelOpenAck;
+use anoma::ibc::core::ics04_channel::msgs::chan_open_confirm::MsgChannelOpenConfirm;
+use anoma::ibc::core::ics04_channel::msgs::chan_open_init::MsgChannelOpenInit;
+use anoma::ibc::core::ics04_channel::msgs::chan_open_try::MsgChannelOpenTry;
+use anoma::ibc::core::ics04_channel::msgs::recv_packet::MsgRecvPacket;
+use anoma::ibc::core::ics04_channel::packet::Packet;
+use anoma::ibc::core::ics04_channel::Version as ChanVersion;
+use anoma::ibc::core::ics23_commitment::commitment::CommitmentProofBytes;
+use anoma::ibc::core::ics23_commitment::merkle::convert_tm_to_ics_merkle_proof;
+use anoma::ibc::core::ics24_host::identifier::{
+    ChainId, ClientId, ConnectionId, PortChannelId, PortId,
+};
+use anoma::ibc::events::{from_tx_response_event, IbcEvent};
+use anoma::ibc::proofs::Proofs;
+use anoma::ibc::signer::Signer;
+use anoma::ibc::timestamp::Timestamp;
+use anoma::ibc::tx_msg::Msg;
+use anoma::ibc_proto::cosmos::base::v1beta1::Coin;
 use anoma::ledger::ibc::handler::{commitment_prefix, port_channel_id};
 use anoma::ledger::ibc::storage::*;
 use anoma::ledger::storage::{MerkleTree, Sha256Hasher};
+use anoma::tendermint::block::Header as TmHeader;
+use anoma::tendermint::merkle::proof::Proof as TmProof;
 use anoma::types::storage::Key;
 use anoma_apps::client::rpc::query_storage_value_bytes;
 use color_eyre::eyre::Result;
 use eyre::eyre;
-#[cfg(not(feature = "ABCI"))]
-use ibc::applications::ics20_fungible_token_transfer::msgs::transfer::MsgTransfer;
-#[cfg(not(feature = "ABCI"))]
-use ibc::clients::ics07_tendermint::client_state::{
-    AllowUpdate, ClientState as TmClientState,
-};
-#[cfg(not(feature = "ABCI"))]
-use ibc::clients::ics07_tendermint::consensus_state::ConsensusState as TmConsensusState;
-#[cfg(not(feature = "ABCI"))]
-use ibc::core::ics02_client::client_state::{AnyClientState, ClientState};
-#[cfg(not(feature = "ABCI"))]
-use ibc::core::ics02_client::height::Height;
-#[cfg(not(feature = "ABCI"))]
-use ibc::core::ics02_client::trust_threshold::TrustThreshold;
-#[cfg(not(feature = "ABCI"))]
-use ibc::core::ics03_connection::msgs::conn_open_ack::MsgConnectionOpenAck;
-#[cfg(not(feature = "ABCI"))]
-use ibc::core::ics03_connection::msgs::conn_open_confirm::MsgConnectionOpenConfirm;
-#[cfg(not(feature = "ABCI"))]
-use ibc::core::ics03_connection::msgs::conn_open_init::MsgConnectionOpenInit;
-#[cfg(not(feature = "ABCI"))]
-use ibc::core::ics03_connection::msgs::conn_open_try::MsgConnectionOpenTry;
-#[cfg(not(feature = "ABCI"))]
-use ibc::core::ics04_channel::channel::{
-    ChannelEnd, Counterparty as ChanCounterparty, Order as ChanOrder,
-    State as ChanState,
-};
-#[cfg(not(feature = "ABCI"))]
-use ibc::core::ics04_channel::msgs::chan_open_ack::MsgChannelOpenAck;
-#[cfg(not(feature = "ABCI"))]
-use ibc::core::ics04_channel::msgs::chan_open_confirm::MsgChannelOpenConfirm;
-#[cfg(not(feature = "ABCI"))]
-use ibc::core::ics04_channel::msgs::chan_open_init::MsgChannelOpenInit;
-#[cfg(not(feature = "ABCI"))]
-use ibc::core::ics04_channel::msgs::recv_packet::MsgRecvPacket;
-#[cfg(not(feature = "ABCI"))]
-use ibc::core::ics04_channel::packet::Packet;
-#[cfg(not(feature = "ABCI"))]
-use ibc::core::ics04_channel::Version as ChanVersion;
-#[cfg(not(feature = "ABCI"))]
-use ibc::core::ics04_channel::Version as ChanVersion;
-#[cfg(not(feature = "ABCI"))]
-use ibc::core::ics23_commitment::commitment::CommitmentProofBytes;
-#[cfg(not(feature = "ABCI"))]
-use ibc::core::ics23_commitment::merkle::convert_tm_to_ics_merkle_proof;
-#[cfg(not(feature = "ABCI"))]
-use ibc::core::ics24_host::identifier::{
-    ChainId, ClientId, ConnectionId, PortChannelId, PortId,
-};
-#[cfg(not(feature = "ABCI"))]
-use ibc::proofs::Proofs;
-#[cfg(not(feature = "ABCI"))]
-use ibc::signer::Signer;
-#[cfg(not(feature = "ABCI"))]
-use ibc::timestamp::Timestamp;
-#[cfg(not(feature = "ABCI"))]
-use ibc::tx_msg::Msg;
-#[cfg(feature = "ABCI")]
-use ibc_abci::applications::ics20_fungible_token_transfer::msgs::transfer::MsgTransfer;
-#[cfg(feature = "ABCI")]
-use ibc_abci::clients::ics07_tendermint::client_state::{
-    AllowUpdate, ClientState as TmClientState,
-};
-#[cfg(feature = "ABCI")]
-use ibc_abci::clients::ics07_tendermint::consensus_state::ConsensusState as TmConsensusState;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics02_client::client_consensus::{
-    AnyConsensusState, ConsensusState,
-};
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics02_client::client_state::{AnyClientState, ClientState};
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics02_client::height::Height;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics02_client::msgs::create_client::MsgCreateAnyClient;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics02_client::trust_threshold::TrustThreshold;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics03_connection::connection::Counterparty as ConnCounterparty;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics03_connection::msgs::conn_open_ack::MsgConnectionOpenAck;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics03_connection::msgs::conn_open_confirm::MsgConnectionOpenConfirm;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics03_connection::msgs::conn_open_init::MsgConnectionOpenInit;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics03_connection::msgs::conn_open_try::MsgConnectionOpenTry;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics03_connection::version::Version as ConnVersion;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics04_channel::channel::{
-    ChannelEnd, Counterparty as ChanCounterparty, Order as ChanOrder,
-    State as ChanState,
-};
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics04_channel::msgs::acknowledgement::MsgAcknowledgement;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics04_channel::msgs::chan_open_ack::MsgChannelOpenAck;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics04_channel::msgs::chan_open_confirm::MsgChannelOpenConfirm;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics04_channel::msgs::chan_open_init::MsgChannelOpenInit;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics04_channel::msgs::chan_open_try::MsgChannelOpenTry;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics04_channel::msgs::recv_packet::MsgRecvPacket;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics04_channel::packet::Packet;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics04_channel::Version as ChanVersion;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics23_commitment::commitment::CommitmentProofBytes;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics23_commitment::merkle::convert_tm_to_ics_merkle_proof;
-#[cfg(feature = "ABCI")]
-use ibc_abci::core::ics24_host::identifier::{
-    ChainId, ClientId, ConnectionId, PortChannelId, PortId,
-};
-#[cfg(feature = "ABCI")]
-use ibc_abci::events::{from_tx_response_event, IbcEvent};
-#[cfg(feature = "ABCI")]
-use ibc_abci::proofs::Proofs;
-#[cfg(feature = "ABCI")]
-use ibc_abci::signer::Signer;
-#[cfg(feature = "ABCI")]
-use ibc_abci::timestamp::Timestamp;
-#[cfg(feature = "ABCI")]
-use ibc_abci::tx_msg::Msg;
-#[cfg(not(feature = "ABCI"))]
-use ibc_proto::cosmos::base::v1beta1::Coin;
-#[cfg(feature = "ABCI")]
-use ibc_proto_abci::cosmos::base::v1beta1::Coin;
 use setup::constants::*;
-#[cfg(not(feature = "ABCI"))]
-use tendermint::block::Header as TmHeader;
-#[cfg(not(feature = "ABCI"))]
-use tendermint::merkle::proof::Proof as TmProof;
 #[cfg(not(feature = "ABCI"))]
 use tendermint_config::net::Address as TendermintAddress;
 #[cfg(feature = "ABCI")]
 use tendermint_config_abci::net::Address as TendermintAddress;
 #[cfg(not(feature = "ABCI"))]
-use tendermint_rpc::{Client, HttpClient};
+use tendermint_rpc::query::Query;
+#[cfg(not(feature = "ABCI"))]
+use tendermint_rpc::{Client, HttpClient, Order};
 #[cfg(feature = "ABCI")]
 use tendermint_rpc_abci::query::Query;
 #[cfg(feature = "ABCI")]
 use tendermint_rpc_abci::{Client, HttpClient, Order};
-#[cfg(feature = "ABCI")]
-use tendermint_stable::block::Header as TmHeader;
-#[cfg(feature = "ABCI")]
-use tendermint_stable::merkle::proof::Proof as TmProof;
 use tokio::runtime::Runtime;
 
 use crate::e2e::helpers::{find_address, get_actor_rpc, get_epoch};
-use crate::e2e::setup::{self, constants, sleep, Bin, Test, Who};
+use crate::e2e::setup::{self, sleep, Bin, Test, Who};
 use crate::{run, run_as};
-
-const TX_IBC_WASM: &str = "tx_ibc.wasm";
-const DATA_PATH: &str = "tx.data";
-const TX_IBC_ARGS: [&str; 5] =
-    ["tx", "--code-path", TX_IBC_WASM, "--data-path", DATA_PATH];
 
 #[test]
 fn run_ledger_ibc() -> Result<()> {
@@ -381,7 +294,7 @@ fn get_connection_proofs(
     conn_id: &ConnectionId,
 ) -> Result<Proofs> {
     let height = query_height(test)?;
-    let key = connection_key(&conn_id);
+    let key = connection_key(conn_id);
     let tm_proof = query_proof(test, key)?;
     let connection_proof = convert_proof(tm_proof)?;
 
@@ -455,7 +368,7 @@ fn channel_handshake(
     let proofs = get_channel_proofs(test_b, &port_channel_id_b)?;
     let msg = MsgChannelOpenAck {
         port_id: port_id.clone(),
-        channel_id: channel_id_a.clone(),
+        channel_id: channel_id_a,
         counterparty_channel_id: channel_id_b.clone(),
         counterparty_version: ChanVersion::ics20(),
         proofs,
@@ -467,7 +380,7 @@ fn channel_handshake(
     let proofs = get_channel_proofs(test_a, &port_channel_id_a)?;
     let msg = MsgChannelOpenConfirm {
         port_id,
-        channel_id: channel_id_b.clone(),
+        channel_id: channel_id_b,
         proofs,
         signer: Signer::new("test_b"),
     };
@@ -494,9 +407,9 @@ fn transfer_token(
     test_b: &Test,
     source_port_channel_id: &PortChannelId,
 ) -> Result<()> {
-    let xan = find_address(&test_a, constants::XAN)?;
-    let sender = find_address(&test_a, constants::ALBERT)?;
-    let receiver = find_address(&test_b, constants::BERTHA)?;
+    let xan = find_address(test_a, XAN)?;
+    let sender = find_address(test_a, ALBERT)?;
+    let receiver = find_address(test_b, BERTHA)?;
 
     // Send a token from Chain A
     let token = Some(Coin {
@@ -573,21 +486,42 @@ fn get_ack_proof(test: &Test, packet: &Packet) -> Result<Proofs> {
 }
 
 fn submit_ibc_tx(test: &Test, message: impl Msg) -> Result<String> {
+    let data_path = test.base_dir.path().join("tx.data");
     let data = make_ibc_data(message);
-    std::fs::write(DATA_PATH, data).expect("writing data failed");
-    let mut client = run!(test, Bin::Client, TX_IBC_ARGS, Some(40))?;
-    if !cfg!(feature = "ABCI") {
-        client.exp_string("Transaction accepted")?;
-    }
-    client.exp_string("Transaction applied")?;
-    client.exp_string("Transaction is valid.")?;
+    std::fs::write(&data_path, data).expect("writing data failed");
+
+    let code_path = wasm_abs_path(TX_IBC_WASM);
+    let code_path = code_path.to_string_lossy();
+    let data_path = data_path.to_string_lossy();
+    let rpc = get_actor_rpc(test, &Who::Validator(0));
+    let mut client = run!(
+        test,
+        Bin::Client,
+        [
+            "tx",
+            "--code-path",
+            &code_path,
+            "--data-path",
+            &data_path,
+            "--signer",
+            ALBERT,
+            "--fee-amount",
+            "0",
+            "--gas-limit",
+            "0",
+            "--fee-token",
+            XAN,
+            "--ledger-address",
+            &rpc
+        ],
+        Some(40)
+    )?;
     let (_unread, matched) = if !cfg!(feature = "ABCI") {
         client.exp_regex("Wrapper transaction hash: .*\n")?
     } else {
         client.exp_regex("Transaction hash: .*\n")?
     };
-    let hash = matched.trim().rsplit_once(' ').unwrap().1.to_string();
-    client.assert_success();
+    let hash = matched.trim().rsplit_once(' ').unwrap().1.replace('"', "");
 
     Ok(hash)
 }
@@ -664,27 +598,12 @@ fn get_event(test: &Test, tx_hash: String) -> Result<IbcEvent> {
     let event = tx_result.events.get(0).ok_or_else(|| {
         eyre!("The transaction response doesn't have any event")
     })?;
-    match from_tx_response_event(height, &event) {
+    match from_tx_response_event(height, event) {
         Some(ibc_event) => Ok(ibc_event),
         None => Err(eyre!(
             "The transaction response doesn't have any IBC event: hash {}",
             tx_hash,
         )),
-    }
-}
-
-fn query_with_proof(test: &Test, key: Key) -> Result<(Vec<u8>, TmProof)> {
-    let rpc = get_actor_rpc(test, &Who::Validator(0));
-    let ledger_address = TendermintAddress::from_str(&rpc).unwrap();
-    let client = HttpClient::new(ledger_address).unwrap();
-    let result = Runtime::new().unwrap().block_on(query_storage_value_bytes(
-        client,
-        key.clone(),
-        true,
-    ));
-    match result {
-        (Some(value), Some(proof)) => Ok((value, proof)),
-        _ => Err(eyre!("The value doesn't exist: key {}", key)),
     }
 }
 

@@ -697,6 +697,7 @@ pub mod constants {
     pub const TX_TRANSFER_WASM: &str = "wasm/tx_transfer.wasm";
     pub const VP_USER_WASM: &str = "wasm/vp_user.wasm";
     pub const TX_NO_OP_WASM: &str = "wasm_for_tests/tx_no_op.wasm";
+    pub const TX_IBC_WASM: &str = "wasm/tx_ibc.wasm";
     pub const VP_ALWAYS_TRUE_WASM: &str = "wasm_for_tests/vp_always_true.wasm";
     pub const VP_ALWAYS_FALSE_WASM: &str =
         "wasm_for_tests/vp_always_false.wasm";
