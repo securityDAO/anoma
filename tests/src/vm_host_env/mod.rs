@@ -112,7 +112,7 @@ mod tests {
         let mut env = TestTxEnv::default();
         let test_account = address::testing::established_address_1();
         env.spawn_accounts([&test_account]);
-        tx_host_env::init_from(env);
+        tx_host_env::set(env);
 
         // Trying to delete a key that doesn't exists should be a no-op
         let key = "key";
@@ -244,15 +244,16 @@ mod tests {
     #[test]
     fn test_vp_host_env() {
         // The environment must be initialized first
-        let mut env = TestVpEnv::default();
-        init_vp_env(&mut env);
+        vp_host_env::init();
 
         // We can add some data to the environment
         let key_raw = "key";
         let key = Key::parse(key_raw).unwrap();
         let value = "test".to_string();
         let value_raw = value.try_to_vec().unwrap();
-        env.write_log.write(&key, value_raw).unwrap();
+        vp_host_env::with(|env| {
+            env.write_log.write(&key, value_raw.clone()).unwrap()
+        });
 
         let read_pre_value: Option<String> = vp_host_env::read_pre(key_raw);
         assert_eq!(None, read_pre_value);
@@ -287,8 +288,7 @@ mod tests {
         let new_value = "vp".repeat(4);
 
         // Initialize the VP environment via a transaction
-        // The `_vp_env` MUST NOT be dropped until the end of the test
-        let _vp_env = init_vp_env_from_tx(addr, tx_env, |_addr| {
+        vp_host_env::init_from_tx(addr, tx_env, |_addr| {
             // Override the existing key
             tx_host_env::write(&existing_key_raw, &override_value);
 
@@ -370,8 +370,7 @@ mod tests {
         let new_key_raw = new_key.to_string();
 
         // Initialize the VP environment via a transaction
-        // The `_vp_env` MUST NOT be dropped until the end of the test
-        let _vp_env = init_vp_env_from_tx(addr, tx_env, |_addr| {
+        vp_host_env::init_from_tx(addr, tx_env, |_addr| {
             // Override one of the existing keys
             tx_host_env::write(&existing_key_raw, 100_i32);
 
@@ -406,6 +405,8 @@ mod tests {
         env.storage
             .write(&pk_key, pk.try_to_vec().unwrap())
             .unwrap();
+        // Initialize the environment
+        vp_host_env::set(env);
 
         // Use some arbitrary bytes for tx code
         let code = vec![4, 3, 2, 1, 0];
@@ -415,16 +416,13 @@ mod tests {
             // Tx without any data
             None,
         ] {
-            env.tx = Tx::new(code.clone(), data.clone()).sign(&keypair);
-            // Initialize the environment
-            init_vp_env(&mut env);
+            let signed_tx_data = vp_host_env::with(|env| {
+                env.tx = Tx::new(code.clone(), data.clone()).sign(&keypair);
+                let tx_data = env.tx.data.as_ref().expect("data should exist");
 
-            let tx_data = env.tx.data.expect("data should exist");
-            let signed_tx_data =
-                match SignedTxData::try_from_slice(&tx_data[..]) {
-                    Ok(data) => data,
-                    _ => panic!("decoding failed"),
-                };
+                SignedTxData::try_from_slice(&tx_data[..])
+                    .expect("decoding signed data we just signed")
+            });
             assert_eq!(&signed_tx_data.data, data);
             assert!(vp_host_env::verify_tx_signature(&pk, &signed_tx_data.sig));
 
@@ -439,29 +437,30 @@ mod tests {
     #[test]
     fn test_vp_get_metadata() {
         // The environment must be initialized first
-        let mut env = TestVpEnv::default();
-        init_vp_env(&mut env);
+        vp_host_env::init();
 
-        assert_eq!(vp_host_env::get_chain_id(), env.storage.get_chain_id().0);
+        assert_eq!(
+            vp_host_env::get_chain_id(),
+            vp_host_env::with(|env| env.storage.get_chain_id().0)
+        );
         assert_eq!(
             vp_host_env::get_block_height(),
-            env.storage.get_block_height().0
+            vp_host_env::with(|env| env.storage.get_block_height().0)
         );
         assert_eq!(
             vp_host_env::get_block_hash(),
-            env.storage.get_block_hash().0
+            vp_host_env::with(|env| env.storage.get_block_hash().0)
         );
         assert_eq!(
             vp_host_env::get_block_epoch(),
-            env.storage.get_current_epoch().0
+            vp_host_env::with(|env| env.storage.get_current_epoch().0)
         );
     }
 
     #[test]
     fn test_vp_eval() {
         // The environment must be initialized first
-        let mut env = TestVpEnv::default();
-        init_vp_env(&mut env);
+        vp_host_env::init();
 
         // evaluating without any code should fail
         let empty_code = vec![];
@@ -531,7 +530,7 @@ mod tests {
         env.write_log.drop_tx();
 
         // Start a transaction to create a new client
-        tx_host_env::init_from(env);
+        tx_host_env::set(env);
         let msg = ibc::msg_create_client();
         let mut tx_data = vec![];
         msg.to_any().encode(&mut tx_data).expect("encoding failed");
@@ -564,7 +563,7 @@ mod tests {
         env.storage.set_header(ibc::tm_dummy_header()).unwrap();
 
         // Start an invalid transaction
-        tx_host_env::init_from(env);
+        tx_host_env::set(env);
         let msg = ibc::msg_update_client(client_id);
         let mut tx_data = vec![];
         msg.clone()
@@ -610,7 +609,7 @@ mod tests {
         env.write_log.drop_tx();
 
         // Start a transaction to update the client
-        tx_host_env::init_from(env);
+        tx_host_env::set(env);
         let msg = ibc::msg_update_client(client_id.clone());
         let mut tx_data = vec![];
         msg.to_any().encode(&mut tx_data).expect("encoding failed");
@@ -642,7 +641,7 @@ mod tests {
         env.storage.set_header(ibc::tm_dummy_header()).unwrap();
 
         // Start a transaction to upgrade the client
-        tx_host_env::init_from(env);
+        tx_host_env::set(env);
         let msg = ibc::msg_upgrade_client(client_id);
         let mut tx_data = vec![];
         msg.to_any().encode(&mut tx_data).expect("encoding failed");
@@ -719,7 +718,7 @@ mod tests {
         env.write_log.drop_tx();
 
         // Start a transaction for ConnectionOpenInit
-        tx_host_env::init_from(env);
+        tx_host_env::set(env);
         let msg = ibc::msg_connection_open_init(client_id);
         let mut tx_data = vec![];
         msg.to_any().encode(&mut tx_data).expect("encoding failed");
@@ -748,7 +747,7 @@ mod tests {
         env.storage.set_header(ibc::tm_dummy_header()).unwrap();
 
         // Start the next transaction for ConnectionOpenAck
-        tx_host_env::init_from(env);
+        tx_host_env::set(env);
         let msg = ibc::msg_connection_open_ack(conn_id, client_state);
         let mut tx_data = vec![];
         msg.to_any().encode(&mut tx_data).expect("encoding failed");
@@ -787,7 +786,7 @@ mod tests {
         });
 
         // Start a transaction for ConnectionOpenTry
-        tx_host_env::init_from(env);
+        tx_host_env::set(env);
         let msg = ibc::msg_connection_open_try(client_id, client_state);
         let mut tx_data = vec![];
         msg.to_any().encode(&mut tx_data).expect("encoding failed");
@@ -816,7 +815,7 @@ mod tests {
         env.storage.set_header(ibc::tm_dummy_header()).unwrap();
 
         // Start the next transaction for ConnectionOpenConfirm
-        tx_host_env::init_from(env);
+        tx_host_env::set(env);
         let conn_id = ibc::connection_id(0);
         let msg = ibc::msg_connection_open_confirm(conn_id);
         let mut tx_data = vec![];
@@ -900,7 +899,7 @@ mod tests {
         env.write_log.drop_tx();
 
         // Start an invalid transaction
-        tx_host_env::init_from(env);
+        tx_host_env::set(env);
         let port_id = ibc::port_id("test_port").expect("invalid port ID");
         let msg = ibc::msg_channel_open_init(port_id.clone(), conn_id.clone());
         let mut tx_data = vec![];
@@ -946,7 +945,7 @@ mod tests {
         env.write_log.drop_tx();
 
         // Start a transaction for ChannelOpenInit
-        tx_host_env::init_from(env);
+        tx_host_env::set(env);
         let port_id = ibc::port_id("test_port").expect("invalid port ID");
         let msg = ibc::msg_channel_open_init(port_id.clone(), conn_id);
         let mut tx_data = vec![];
@@ -972,7 +971,7 @@ mod tests {
 
         // Commit
         env.commit_tx_and_block();
-        tx_host_env::init_from(env);
+        tx_host_env::set(env);
 
         // Start the next transaction for ChannelOpenAck
         let msg = ibc::msg_channel_open_ack(port_id, channel_id);
@@ -1042,7 +1041,7 @@ mod tests {
         env.commit_tx_and_block();
 
         // Start the next transaction for ChannelOpenConfirm
-        tx_host_env::init_from(env);
+        tx_host_env::set(env);
         let channel_id = ibc::channel_id(0);
         let msg = ibc::msg_channel_open_confirm(port_id, channel_id);
         let mut tx_data = vec![];
@@ -1217,7 +1216,7 @@ mod tests {
         env.commit_tx_and_block();
 
         // Start the next transaction for receiving an ack
-        tx_host_env::init_from(env);
+        tx_host_env::set(env);
         let counterparty = ibc::dummy_channel_counterparty();
         let packet =
             ibc::packet_from_message(&msg, ibc::sequence(1), &counterparty);
@@ -1490,7 +1489,7 @@ mod tests {
         env.commit_tx_and_block();
 
         // Start the next transaction for receiving an ack
-        tx_host_env::init_from(env);
+        tx_host_env::set(env);
         let counterparty = ibc::dummy_channel_counterparty();
         let packet =
             ibc::packet_from_message(&msg, ibc::sequence(1), &counterparty);
