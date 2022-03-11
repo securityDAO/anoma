@@ -41,7 +41,8 @@ wee_alloc = "0.4.5"
 [dev-dependencies]
 anoma = {path = "../../shared"}
 anoma_tests = {path = "../../tests"}
-proptest = "1.0.0"
+# A fork with state machine testing
+proptest = {git = "https://github.com/heliaxdev/proptest", branch = "tomas/sm"}
 tracing = "0.1.29"
 tracing-subscriber = {version = "0.2.25", default-features = false, features = ["env-filter", "fmt"]}
 
