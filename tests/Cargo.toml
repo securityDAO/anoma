@@ -53,6 +53,7 @@ tendermint-proto = {git = "https://github.com/heliaxdev/tendermint-rs", branch =
 tendermint-proto-abci = {package = "tendermint-proto", git = "https://github.com/heliaxdev/tendermint-rs", branch = "yuji/rebase_v0.23.5", optional = true}
 tracing = "0.1.26"
 tracing-subscriber = {version = "0.2.25", default-features = false, features = ["env-filter", "fmt"]}
+derivative = "2.2.0"
 
 [dev-dependencies]
 anoma_apps = {path = "../apps", default-features = false, features = ["testing"]}

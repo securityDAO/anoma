@@ -111,6 +111,7 @@ dependencies = [
  "anoma_vm_env",
  "chrono",
  "concat-idents",
+ "derivative",
  "ibc",
  "ibc-proto",
  "prost",

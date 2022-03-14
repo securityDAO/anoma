@@ -245,6 +245,7 @@ dependencies = [
  "chrono",
  "color-eyre",
  "concat-idents",
+ "derivative",
  "escargot",
  "eyre",
  "fs_extra",
