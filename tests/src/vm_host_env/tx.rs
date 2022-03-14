@@ -5,6 +5,7 @@ use anoma::ledger::gas::BlockGasMeter;
 use anoma::ledger::storage::mockdb::MockDB;
 use anoma::ledger::storage::testing::TestStorage;
 use anoma::ledger::storage::write_log::WriteLog;
+use anoma::proto::Tx;
 use anoma::types::address::Address;
 use anoma::types::storage::Key;
 use anoma::types::{key, token};
@@ -40,6 +41,7 @@ pub struct TestTxEnv {
     pub vp_cache_dir: TempDir,
     pub tx_wasm_cache: TxCache<WasmCacheRwAccess>,
     pub tx_cache_dir: TempDir,
+    pub tx: Tx,
 }
 impl Default for TestTxEnv {
     fn default() -> Self {
@@ -59,6 +61,7 @@ impl Default for TestTxEnv {
             vp_cache_dir,
             tx_wasm_cache,
             tx_cache_dir,
+            tx: Tx::new(vec![], None),
         }
     }
 }
@@ -224,6 +227,7 @@ mod native_tx_host_env {
                                 vp_cache_dir: _,
                                 tx_wasm_cache,
                                 tx_cache_dir: _,
+                                tx: _,
                             }: &mut TestTxEnv| {
 
                             let tx_env = vm::host_env::testing::tx_env(
@@ -261,6 +265,7 @@ mod native_tx_host_env {
                                 vp_cache_dir: _,
                                 tx_wasm_cache,
                                 tx_cache_dir: _,
+                                tx: _,
                             }: &mut TestTxEnv| {
 
                             let tx_env = vm::host_env::testing::tx_env(
