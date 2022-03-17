@@ -1325,8 +1325,11 @@ where
                                     }
                                 }
                                 None => {
-                                    // Others must be the same as in pre
-                                    if !pre.active.contains(validator) {
+                                    // Others must be have the same voting power
+                                    // as in pre (active or inactive)
+                                    if !pre.active.contains(validator)
+                                        && !pre.inactive.contains(validator)
+                                    {
                                         errors.push(
                                             Error::InvalidActiveValidator(
                                                 validator.clone(),
@@ -1354,8 +1357,11 @@ where
                                     }
                                 }
                                 None => {
-                                    // Others must be the same as in pre
-                                    if !pre.inactive.contains(validator) {
+                                    // Others must be have the same voting power
+                                    // as in pre (active or inactive)
+                                    if !pre.active.contains(validator)
+                                        && !pre.inactive.contains(validator)
+                                    {
                                         errors.push(
                                             Error::InvalidInactiveValidator(
                                                 validator.clone(),
