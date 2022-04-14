@@ -839,21 +839,6 @@ pub fn init_genesis_validator(
 ) {
     let setup_dir = global_args.base_dir.join(PREGENESIS_DIR);
     let mut wallet = Wallet::load_or_new(&setup_dir);
-    init_genesis_validator_aux(
-        &mut wallet,
-        alias,
-        unsafe_dont_encrypt,
-    );
-}
-
-/// Initialize genesis validator's address, staking reward address,
-/// consensus key, validator account key and staking rewards key and use
-/// it in the ledger's node.
-fn init_genesis_validator_aux(
-    wallet: &mut Wallet,
-    alias: String,
-    unsafe_dont_encrypt: bool,
-) -> genesis::Validator {
     // Generate validator address
     let validator_address =
         address::gen_established_address("genesis validator address");
@@ -889,6 +874,12 @@ fn init_genesis_validator_aux(
     let (rewards_key_alias, rewards_key) = wallet
         .gen_key(Some(format!("{}-rewards-key", alias)), unsafe_dont_encrypt);
 
+    println!("Generating tendermint node key...");
+    let (tendermint_node_alias, tendermint_node_key) = wallet.gen_key(
+        Some(format!("{}-tendermint-key", alias)),
+        unsafe_dont_encrypt,
+    );
+
     println!("Generating protocol key and DKG session key...");
     let validator_keys = wallet.gen_validator_keys(None).unwrap();
     let protocol_key = validator_keys.get_protocol_keypair().ref_to();
@@ -911,13 +902,8 @@ fn init_genesis_validator_aux(
         "The ledger node has been setup to use this validator's address and \
          consensus key."
     );
+    println!("  Tendermint node key \"{}\"", tendermint_node_alias);
     println!();
-
-    println!("Validator account key {}", validator_key.ref_to());
-    println!("Consensus key {}", consensus_key.ref_to());
-    println!("Staking reward key {}", rewards_key.ref_to());
-    println!("Protocol signing key {}", &protocol_key);
-    println!("DKG public key {}", &dkg_public_key);
 
     let validator_config = genesis_config::ValidatorConfig {
         consensus_public_key: Some(hexencode(consensus_key.as_ref())),
@@ -935,7 +921,8 @@ fn init_genesis_validator_aux(
         matchmaker_account: None,
         matchmaker_code: None,
         matchmaker_tx: None,
-        intent_gossip_seed: None
+        intent_gossip_seed: None,
+        tendermint_node_key: Some(hexencode(tendermint_node_key.as_ref())),
     };
     // this prints the validator block in the same way as the genesis config TOML would look like
     println!("[validator.{}]", validator_address_alias);
