@@ -839,26 +839,6 @@ pub fn init_genesis_validator(
 ) {
     let setup_dir = global_args.base_dir.join(PREGENESIS_DIR);
     let mut wallet = Wallet::load_or_new(&setup_dir);
-    // Generate validator address
-    let validator_address =
-        address::gen_established_address("genesis validator address");
-    let validator_address_alias = alias.clone();
-    if wallet
-        .add_address(validator_address_alias.clone(), validator_address.clone())
-        .is_none()
-    {
-        cli::safe_exit(1)
-    }
-    // Generate staking reward address
-    let rewards_address =
-        address::gen_established_address("genesis validator reward address");
-    let rewards_address_alias = format!("{}-rewards", alias);
-    if wallet
-        .add_address(rewards_address_alias.clone(), rewards_address.clone())
-        .is_none()
-    {
-        cli::safe_exit(1)
-    }
 
     println!("Generating validator account key...");
     let (validator_key_alias, validator_key) = wallet.gen_key(
@@ -888,20 +868,14 @@ pub fn init_genesis_validator(
         .as_ref()
         .expect("DKG session keypair should exist.")
         .public();
-    wallet.add_validator_data(validator_address.clone(), validator_keys);
+    wallet.add_validator_keys(validator_keys);
     wallet.save().unwrap_or_else(|err| eprintln!("{}", err));
 
     println!();
-    println!("The validator's addresses and keys were stored in the wallet:");
-    println!("  Validator address \"{}\"", validator_address_alias);
-    println!("  Staking reward address \"{}\"", rewards_address_alias);
+    println!("The validator's keys were stored in the wallet:");
     println!("  Validator account key \"{}\"", validator_key_alias);
     println!("  Consensus key \"{}\"", consensus_key_alias);
     println!("  Staking reward key \"{}\"", rewards_key_alias);
-    println!(
-        "The ledger node has been setup to use this validator's address and \
-         consensus key."
-    );
     println!("  Tendermint node key \"{}\"", tendermint_node_alias);
     println!();
 
@@ -924,8 +898,9 @@ pub fn init_genesis_validator(
         intent_gossip_seed: None,
         tendermint_node_key: Some(hexencode(tendermint_node_key.as_ref())),
     };
-    // this prints the validator block in the same way as the genesis config TOML would look like
-    println!("[validator.{}]", validator_address_alias);
+    // this prints the validator block in the same way as the genesis config
+    // TOML would look like
+    println!("[validator.{}]", alias);
     println!("{}", toml::to_string(&validator_config).unwrap());
 }
 

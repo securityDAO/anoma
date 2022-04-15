@@ -128,9 +128,9 @@ impl Wallet {
                 .ok()
                 .or_else(|| {
                     self.store
-                        .validator_data
+                        .validator_keys
                         .take()
-                        .map(|data| Rc::new(data.keys.protocol_keypair))
+                        .map(|data| Rc::new(data.protocol_keypair))
                 })
                 .ok_or(FindKeyError::KeyNotFound)
         });
@@ -144,6 +144,11 @@ impl Wallet {
         }
     }
 
+    /// Add validator keys to the store
+    pub fn add_validator_keys(&mut self, keys: ValidatorKeys) {
+        self.store.add_validator_keys(keys);
+    }
+
     /// Add validator data to the store
     pub fn add_validator_data(
         &mut self,
@@ -153,9 +158,14 @@ impl Wallet {
         self.store.add_validator_data(address, keys);
     }
 
-    /// Returns the validator data, if it exists.
-    pub fn get_validator_data(&self) -> Option<&ValidatorData> {
-        self.store.get_validator_data()
+    /// Returns the validator keys, if they exists.
+    pub fn get_validator_keys(&self) -> Option<&ValidatorKeys> {
+        self.store.get_validator_keys()
+    }
+
+    /// Returns the validator address, if it exists.
+    pub fn get_validator_address(&self) -> Option<&Address> {
+        self.store.get_validator_address()
     }
 
     /// Returns the validator data, if it exists.
