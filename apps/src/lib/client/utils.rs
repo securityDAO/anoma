@@ -890,8 +890,29 @@ pub fn init_genesis_validator(
     };
     // this prints the validator block in the same way as the genesis config
     // TOML would look like
-    println!("[validator.{}]", alias);
-    println!("{}", toml::to_string(&validator_config).unwrap());
+
+    let genesis_part = format!(
+        "[validator.{alias}]\n{}",
+        toml::to_string(&validator_config).unwrap()
+    );
+    println!("Your public partial pre-genesis TOML configuration:");
+    println!();
+    println!("{genesis_part}");
+
+    let file_name = setup_dir.join(format!("{alias}-pre-genesis.toml"));
+    fs::write(&file_name, genesis_part).unwrap_or_else(|err| {
+        eprintln!(
+            "Couldn't write partial pre-genesis file to {}. Failed with: {}",
+            file_name.to_string_lossy(),
+            err
+        );
+        cli::safe_exit(1)
+    });
+    println!();
+    println!(
+        "Pre-genesis TOML written to {}",
+        file_name.to_string_lossy()
+    );
 }
 
 fn hexencode<T: BorshSerialize>(value: T) -> HexString {
