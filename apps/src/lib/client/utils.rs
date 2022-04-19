@@ -42,7 +42,8 @@ use crate::wasm_loader;
 pub const NET_ACCOUNTS_DIR: &str = "setup";
 pub const NET_OTHER_ACCOUNTS_DIR: &str = "other";
 /// Github URL prefix of released Anoma network configs
-const RELEASE_PREFIX: &str =
+const ENV_VAR_NETWORK_CONFIGS_SERVER: &str = "ANOMA_NETWORK_CONFIGS_SERVER";
+const DEFAULT_NETWORK_CONFIGS_SERVER: &str =
     "https://github.com/heliaxdev/anoma-network-config/releases/download";
 
 /// We do pregenesis validator set up in this directory
@@ -52,7 +53,10 @@ const PREGENESIS_DIR: &str = "pregenesis";
 /// the <https://github.com/heliaxdev/anoma-network-config> repository.
 pub async fn join_network(
     global_args: args::Global,
-    args::JoinNetwork { chain_id, genesis_validator }: args::JoinNetwork,
+    args::JoinNetwork {
+        chain_id,
+        genesis_validator,
+    }: args::JoinNetwork,
 ) {
     use tokio::fs;
 
@@ -92,8 +96,12 @@ pub async fn join_network(
     let base_dir_full = fs::canonicalize(base_dir).await.unwrap();
 
     let release_filename = format!("{}.tar.gz", chain_id);
-    let release_url =
-        format!("{}/{}/{}", RELEASE_PREFIX, chain_id, release_filename);
+    let release_url = format!(
+        "{}/{}/{}",
+        network_configs_server(),
+        chain_id,
+        release_filename
+    );
     let cwd = env::current_dir().unwrap();
 
     // Read or download the release archive
@@ -1019,4 +1027,9 @@ fn try_parse_public_key(
             cli::safe_exit(1)
         })
     })
+}
+
+fn network_configs_server() -> String {
+    std::env::var(ENV_VAR_NETWORK_CONFIGS_SERVER)
+        .unwrap_or_else(|_| DEFAULT_NETWORK_CONFIGS_SERVER.into())
 }
