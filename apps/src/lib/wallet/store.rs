@@ -121,15 +121,23 @@ impl Store {
         filelock.file.write_all(&data)
     }
 
+    /// Load the store file.
+    pub fn load(store_dir: &Path) -> Result<Option<Self>, LoadStoreError> {
+        Self::load_or_new_aux(store_dir)
+    }
+
     /// Load the store file or create a new one without any keys or addresses.
     pub fn load_or_new(store_dir: &Path) -> Result<Self, LoadStoreError> {
-        Self::load_or_new_aux(store_dir, || {
-            let store = Self::default();
-            store.save(store_dir).map_err(|err| {
-                LoadStoreError::StoreNewWallet(err.to_string())
-            })?;
-            Ok(store)
-        })
+        match Self::load_or_new_aux(store_dir)? {
+            Some(store) => Ok(store),
+            None => {
+                let store = Self::default();
+                store.save(store_dir).map_err(|err| {
+                    LoadStoreError::StoreNewWallet(err.to_string())
+                })?;
+                Ok(store)
+            }
+        }
     }
 
     /// Load the store file or create a new one with the default addresses from
@@ -138,27 +146,29 @@ impl Store {
         store_dir: &Path,
         load_genesis: impl FnOnce() -> GenesisConfig,
     ) -> Result<Self, LoadStoreError> {
-        Self::load_or_new_aux(store_dir, || {
-            #[cfg(not(feature = "dev"))]
-            let store = Self::new(load_genesis());
-            #[cfg(feature = "dev")]
-            let store = {
-                // The function is unused in dev
-                let _ = load_genesis;
-                Self::new()
-            };
-            store.save(store_dir).map_err(|err| {
-                LoadStoreError::StoreNewWallet(err.to_string())
-            })?;
-            Ok(store)
-        })
+        match Self::load_or_new_aux(store_dir)? {
+            Some(store) => Ok(store),
+            None => {
+                #[cfg(not(feature = "dev"))]
+                let store = Self::new(load_genesis());
+                #[cfg(feature = "dev")]
+                let store = {
+                    // The function is unused in dev
+                    let _ = load_genesis;
+                    Self::new()
+                };
+                store.save(store_dir).map_err(|err| {
+                    LoadStoreError::StoreNewWallet(err.to_string())
+                })?;
+                Ok(store)
+            }
+        }
     }
 
     /// Load the store file or create a new with the provided function.
     fn load_or_new_aux(
         store_dir: &Path,
-        new_store: impl FnOnce() -> Result<Self, LoadStoreError>,
-    ) -> Result<Self, LoadStoreError> {
+    ) -> Result<Option<Self>, LoadStoreError> {
         let wallet_file = wallet_file(store_dir);
         match FileLock::lock(
             wallet_file.to_str().unwrap(),
@@ -173,7 +183,9 @@ impl Store {
                         err.to_string(),
                     )
                 })?;
-                Store::decode(store).map_err(LoadStoreError::Decode)
+                Store::decode(store)
+                    .map(Some)
+                    .map_err(LoadStoreError::Decode)
             }
             Err(err) => match err.kind() {
                 ErrorKind::NotFound => {
@@ -181,7 +193,7 @@ impl Store {
                         "No wallet found at {:?}. Creating a new one.",
                         wallet_file
                     );
-                    new_store()
+                    Ok(None)
                 }
                 _ => Err(LoadStoreError::ReadWallet(
                     wallet_file.to_string_lossy().into_owned(),
@@ -263,6 +275,11 @@ impl Store {
     /// Get all known addresses by their alias, paired with PKH, if known.
     pub fn get_addresses(&self) -> &HashMap<Alias, Address> {
         &self.addresses
+    }
+
+    /// Set the validator address.
+    pub fn set_validator_address(&mut self, address: Address) {
+        self.validator_address = Some(address);
     }
 
     fn generate_keypair() -> common::SecretKey {
@@ -413,6 +430,17 @@ impl Store {
         }
         self.addresses.insert(alias.clone(), address);
         Some(alias)
+    }
+
+    /// Extend this store from another store.
+    pub fn extend(&mut self, other: Self) {
+        self.keys.extend(other.keys.into_iter());
+        self.addresses.extend(other.addresses.into_iter());
+        self.pkhs.extend(other.pkhs.into_iter());
+        self.validator_address =
+            self.validator_address.take().or(other.validator_address);
+        self.validator_keys =
+            self.validator_keys.take().or(other.validator_keys);
     }
 
     fn decode(data: Vec<u8>) -> Result<Self, toml::de::Error> {

@@ -36,6 +36,24 @@ pub enum FindKeyError {
 }
 
 impl Wallet {
+    /// Load a wallet from the store file.
+    pub fn load(store_dir: &Path) -> Option<Self> {
+        let store = Store::load(store_dir).unwrap_or_else(|err| {
+            eprintln!("Unable to load the wallet: {}", err);
+            cli::safe_exit(1)
+        })?;
+        Some(Self {
+            store_dir: store_dir.to_path_buf(),
+            store,
+            decrypted_key_cache: HashMap::default(),
+        })
+    }
+
+    /// Extend this wallet from another wallet.
+    pub fn extend(&mut self, other: Self) {
+        self.store.extend(other.store)
+    }
+
     /// Load a wallet from the store file or create a new wallet without any
     /// keys or addresses.
     pub fn load_or_new(store_dir: &Path) -> Self {
@@ -173,6 +191,11 @@ impl Wallet {
     /// method as it involves a partial move
     pub fn take_validator_data(self) -> Option<ValidatorData> {
         self.store.validator_data()
+    }
+
+    /// Set the validator address.
+    pub fn set_validator_address(&mut self, address: Address) {
+        self.store.set_validator_address(address);
     }
 
     /// Find the stored key by an alias, a public key hash or a public key.
