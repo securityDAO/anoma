@@ -52,7 +52,7 @@ const PREGENESIS_DIR: &str = "pregenesis";
 /// the <https://github.com/heliaxdev/anoma-network-config> repository.
 pub async fn join_network(
     global_args: args::Global,
-    args::JoinNetwork { chain_id }: args::JoinNetwork,
+    args::JoinNetwork { chain_id, genesis_validator }: args::JoinNetwork,
 ) {
     use tokio::fs;
 
@@ -291,7 +291,8 @@ pub fn init_network(
 
         let chain_dir = validator_dir.join(&accounts_temp_dir);
         let tm_home_dir = chain_dir.join("tendermint");
-        // ensures the whole directory hierarchy exists in case it is assumed later on
+        // ensures the whole directory hierarchy exists in case it is assumed
+        // later on
         std::fs::create_dir_all(&tm_home_dir).unwrap();
 
         // Find or generate tendermint node key
@@ -946,12 +947,18 @@ pub fn init_genesis_validator(
     println!();
 
     let validator_config = genesis_config::ValidatorConfig {
-        consensus_public_key: Some(HexString(consensus_key.ref_to().to_string())),
+        consensus_public_key: Some(HexString(
+            consensus_key.ref_to().to_string(),
+        )),
         account_public_key: Some(HexString(validator_key.ref_to().to_string())),
-        staking_reward_public_key: Some(HexString(rewards_key.ref_to().to_string())),
+        staking_reward_public_key: Some(HexString(
+            rewards_key.ref_to().to_string(),
+        )),
         protocol_public_key: Some(HexString(protocol_key.to_string())),
         dkg_public_key: Some(HexString(dkg_public_key.to_string())),
-        tendermint_node_key: Some(HexString(tendermint_node_key.ref_to().to_string())),
+        tendermint_node_key: Some(HexString(
+            tendermint_node_key.ref_to().to_string(),
+        )),
         ..Default::default()
     };
     // this prints the validator block in the same way as the genesis config
