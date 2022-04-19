@@ -946,12 +946,12 @@ pub fn init_genesis_validator(
     println!();
 
     let validator_config = genesis_config::ValidatorConfig {
-        consensus_public_key: Some(hexencode(consensus_key.ref_to())),
-        account_public_key: Some(hexencode(validator_key.ref_to())),
-        staking_reward_public_key: Some(hexencode(rewards_key.ref_to())),
-        protocol_public_key: Some(hexencode(&protocol_key)),
-        dkg_public_key: Some(hexencode(&dkg_public_key)),
-        tendermint_node_key: Some(hexencode(tendermint_node_key.ref_to())),
+        consensus_public_key: Some(HexString(consensus_key.ref_to().to_string())),
+        account_public_key: Some(HexString(validator_key.ref_to().to_string())),
+        staking_reward_public_key: Some(HexString(rewards_key.ref_to().to_string())),
+        protocol_public_key: Some(HexString(protocol_key.to_string())),
+        dkg_public_key: Some(HexString(dkg_public_key.to_string())),
+        tendermint_node_key: Some(HexString(tendermint_node_key.ref_to().to_string())),
         ..Default::default()
     };
     // this prints the validator block in the same way as the genesis config
@@ -979,10 +979,6 @@ pub fn init_genesis_validator(
         "Pre-genesis TOML written to {}",
         file_name.to_string_lossy()
     );
-}
-
-fn hexencode<T: BorshSerialize>(value: T) -> HexString {
-    HexString(hex::encode(value.try_to_vec().unwrap()))
 }
 
 async fn download_file(url: impl AsRef<str>) -> Vec<u8> {
