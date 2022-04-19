@@ -944,12 +944,12 @@ pub fn init_genesis_validator(
     println!();
 
     let validator_config = genesis_config::ValidatorConfig {
-        consensus_public_key: Some(hexencode(consensus_key.as_ref())),
-        account_public_key: Some(hexencode(validator_key.as_ref())),
-        staking_reward_public_key: Some(hexencode(rewards_key.as_ref())),
+        consensus_public_key: Some(hexencode(consensus_key.ref_to())),
+        account_public_key: Some(hexencode(validator_key.ref_to())),
+        staking_reward_public_key: Some(hexencode(rewards_key.ref_to())),
         protocol_public_key: Some(hexencode(&protocol_key)),
         dkg_public_key: Some(hexencode(&dkg_public_key)),
-        tendermint_node_key: Some(hexencode(tendermint_node_key.as_ref())),
+        tendermint_node_key: Some(hexencode(tendermint_node_key.ref_to())),
         ..Default::default()
     };
     // this prints the validator block in the same way as the genesis config
