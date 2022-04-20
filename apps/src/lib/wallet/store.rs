@@ -189,10 +189,7 @@ impl Store {
             }
             Err(err) => match err.kind() {
                 ErrorKind::NotFound => {
-                    println!(
-                        "No wallet found at {:?}. Creating a new one.",
-                        wallet_file
-                    );
+                    println!("No wallet found at {:?}", wallet_file);
                     Ok(None)
                 }
                 _ => Err(LoadStoreError::ReadWallet(
