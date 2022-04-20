@@ -286,6 +286,21 @@ pub async fn join_network(
         wallet.set_validator_address(address);
 
         wallet.save().unwrap();
+
+        // Update the config from the default non-validator settings to
+        // validator settings
+        let base_dir = base_dir.clone();
+        let chain_id = chain_id.clone();
+        tokio::task::spawn_blocking(move || {
+            let mut config = Config::load(&base_dir, &chain_id, None);
+            config.ledger.tendermint.tendermint_mode =
+                TendermintMode::Validator;
+            // Validator node should turned off peer exchange reactor
+            config.ledger.tendermint.p2p_pex = false;
+            config.write(&base_dir, &chain_id, true).unwrap();
+        })
+        .await
+        .unwrap();
     }
     println!("Successfully configured for chain ID {}", chain_id);
 }
