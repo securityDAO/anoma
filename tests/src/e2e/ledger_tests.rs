@@ -22,6 +22,7 @@ use anoma_apps::config::genesis::genesis_config::{
     self, GenesisConfig, ParametersConfig, PosParamsConfig,
     ValidatorPreGenesisConfig,
 };
+use anoma_apps::config::Config;
 use borsh::BorshSerialize;
 use color_eyre::eyre::Result;
 use setup::constants::*;
@@ -78,10 +79,16 @@ fn test_node_connectivity() -> Result<()> {
     let args = ["ledger"];
     let mut validator_0 =
         run_as!(test, Who::Validator(0), Bin::Node, args, Some(40))?;
+    validator_0.exp_string("Anoma ledger node started")?;
+    validator_0.exp_string("This node is a validator")?;
     let mut validator_1 =
         run_as!(test, Who::Validator(1), Bin::Node, args, Some(40))?;
+    validator_1.exp_string("Anoma ledger node started")?;
+    validator_1.exp_string("This node is a validator")?;
     let mut non_validator =
         run_as!(test, Who::NonValidator, Bin::Node, args, Some(40))?;
+    non_validator.exp_string("Anoma ledger node started")?;
+    non_validator.exp_string("This node is not a validator")?;
 
     // 2. Submit a valid token transfer tx
     let validator_one_rpc = get_actor_rpc(&test, &Who::Validator(0));
@@ -1046,7 +1053,12 @@ fn test_genesis_validators() -> Result<()> {
             base_dir.path(),
             validator_1_alias,
         );
-    let config = std::fs::read_to_string(&validator_1_pre_genesis_dir).unwrap();
+    let config = std::fs::read_to_string(
+        &anoma_apps::client::utils::validator_pre_genesis_file(
+            &validator_1_pre_genesis_dir,
+        ),
+    )
+    .unwrap();
     let mut validator_1_config: ValidatorPreGenesisConfig =
         toml::from_str(&config).unwrap();
     let validator_1_config = validator_1_config
@@ -1140,20 +1152,31 @@ fn test_genesis_validators() -> Result<()> {
     };
 
     // Host the network archive to make it available for `join-network` commands
-    let network_archive_path = working_dir.join(format!("{}.tar.gz", chain_id));
-    let network_archive_server = file_serve::Server::new(&network_archive_path);
+    let network_archive_server = file_serve::Server::new(&working_dir);
     let network_archive_addr = network_archive_server.addr().to_owned();
     std::thread::spawn(move || {
         network_archive_server.serve().unwrap();
     });
 
     // 3. Setup and start the 2 genesis validator nodes and a non-validator node
+
+    // Clean-up the chain dir from the existing validator dir that were created
+    // by `init-network`, because we want to set them up with `join-network`
+    // instead
+    let validator_0_base_dir = test.get_base_dir(&Who::Validator(0));
+    let validator_1_base_dir = test.get_base_dir(&Who::Validator(1));
+    std::fs::remove_dir_all(&validator_0_base_dir).unwrap();
+    std::fs::remove_dir_all(&validator_1_base_dir).unwrap();
+
     std::env::set_var(
         anoma_apps::client::utils::ENV_VAR_NETWORK_CONFIGS_SERVER,
-        network_archive_addr,
+        format!(
+            "http://{network_archive_addr}/{}",
+            working_dir.to_string_lossy()
+        ),
     );
     let pre_genesis_path = validator_0_pre_genesis_dir.to_string_lossy();
-    let join_network_val_0 = run_as!(
+    let mut join_network_val_0 = run_as!(
         test,
         Who::Validator(0),
         Bin::Client,
@@ -1162,15 +1185,17 @@ fn test_genesis_validators() -> Result<()> {
             "join-network",
             "--chain-id",
             chain_id.as_str(),
+            "--genesis-validator",
+            validator_0_alias,
             "--pre-genesis-path",
             pre_genesis_path.as_ref(),
         ],
         Some(5)
     )?;
-    join_network_val_0.assert_success();
+    join_network_val_0.exp_string("Successfully configured for chain")?;
 
     let pre_genesis_path = validator_1_pre_genesis_dir.to_string_lossy();
-    let join_network_val_1 = run_as!(
+    let mut join_network_val_1 = run_as!(
         test,
         Who::Validator(1),
         Bin::Client,
@@ -1179,20 +1204,75 @@ fn test_genesis_validators() -> Result<()> {
             "join-network",
             "--chain-id",
             chain_id.as_str(),
+            "--genesis-validator",
+            validator_1_alias,
             "--pre-genesis-path",
             pre_genesis_path.as_ref(),
         ],
         Some(5)
     )?;
-    join_network_val_1.assert_success();
+    join_network_val_1.exp_string("Successfully configured for chain")?;
+
+    // We have to update the ports in the configs again, because the ones from
+    // `join-network` use the defaults
+    let update_config = |ix: u8, mut config: Config| {
+        let first_port = net_address_port_0
+            + 6 * (ix as u16 + 1)
+            + if cfg!(feature = "ABCI") {
+                0
+            } else {
+                setup::ABCI_PLUS_PLUS_PORT_OFFSET
+            };
+        config.ledger.tendermint.p2p_address.set_port(first_port);
+        config
+            .ledger
+            .tendermint
+            .rpc_address
+            .set_port(first_port + 1);
+        config.ledger.shell.ledger_address.set_port(first_port + 2);
+        config
+    };
+
+    let validator_0_config = update_config(
+        0,
+        Config::load(&validator_0_base_dir, &test.net.chain_id, None),
+    );
+    validator_0_config
+        .write(&validator_0_base_dir, &chain_id, true)
+        .unwrap();
+
+    let validator_1_config = update_config(
+        1,
+        Config::load(&validator_1_base_dir, &test.net.chain_id, None),
+    );
+    validator_1_config
+        .write(&validator_1_base_dir, &chain_id, true)
+        .unwrap();
+
+    // Copy WASMs to each node's chain dir
+    let chain_dir = test.base_dir.path().join(chain_id.as_str());
+    setup::copy_wasm_to_chain_dir(
+        &working_dir,
+        &chain_dir,
+        &chain_id,
+        test.genesis.validator.keys(),
+    );
 
     let args = ["ledger"];
     let mut validator_0 =
         run_as!(test, Who::Validator(0), Bin::Node, args, Some(40))?;
+    validator_0.exp_string("Anoma ledger node started")?;
+    validator_0.exp_string("This node is a validator")?;
+
     let mut validator_1 =
         run_as!(test, Who::Validator(1), Bin::Node, args, Some(40))?;
+    validator_1.exp_string("Anoma ledger node started")?;
+    validator_1.exp_string("This node is a validator")?;
+
     let mut non_validator =
         run_as!(test, Who::NonValidator, Bin::Node, args, Some(40))?;
+    non_validator.exp_string("Anoma ledger node started")?;
+    non_validator.exp_string("This node is not a validator")?;
 
     // 4. Submit a valid token transfer tx
     let validator_one_rpc = get_actor_rpc(&test, &Who::Validator(0));
