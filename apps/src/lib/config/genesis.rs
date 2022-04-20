@@ -15,6 +15,9 @@ use anoma::types::time::DateTimeUtc;
 use anoma::types::{storage, token};
 use borsh::{BorshDeserialize, BorshSerialize};
 use derivative::Derivative;
+use serde::{Deserialize, Serialize};
+
+use crate::wallet;
 
 /// Genesis configuration file format
 pub mod genesis_config {
@@ -115,6 +118,15 @@ pub mod genesis_config {
         pub pos_params: PosParamsConfig,
         // Wasm definitions
         pub wasm: HashMap<String, WasmConfig>,
+    }
+
+    /// Validator pre-genesis configuration can be created with client utils
+    /// `init-genesis-validator` command and added to a genesis for
+    /// `init-network` cmd and that can be subsequently read by `join-network`
+    /// cmd to setup a genesis validator node.
+    #[derive(Serialize, Deserialize, Debug)]
+    pub struct ValidatorPreGenesisConfig {
+        pub validator: HashMap<String, ValidatorConfig>,
     }
 
     #[derive(Clone, Default, Debug, Deserialize, Serialize)]
@@ -671,8 +683,6 @@ pub fn genesis() -> Genesis {
     use anoma::ledger::parameters::EpochDuration;
     use anoma::types::address;
 
-    use crate::wallet;
-
     let vp_token_path = "vp_token.wasm";
     let vp_user_path = "vp_user.wasm";
 
@@ -795,6 +805,21 @@ pub fn genesis() -> Genesis {
         parameters,
         pos_params: PosParams::default(),
     }
+}
+
+/// Validator pre-genesis includes all the required keys for genesis.
+#[derive(Serialize, Deserialize, Debug)]
+pub struct ValidatorPreGenesis {
+    /// Cryptographic keypair for validator account key
+    account_key: wallet::StoredKeypair,
+    /// Cryptographic keypair for consensus key
+    consensus_key: wallet::StoredKeypair,
+    /// Cryptographic keypair for rewards key
+    rewards_key: wallet::StoredKeypair,
+    /// Cryptographic keypair for Tendermint node key
+    tendermint_node_key: wallet::StoredKeypair,
+    /// Special validator keys
+    pub(crate) validator_keys: wallet::ValidatorKeys,
 }
 
 #[cfg(test)]
