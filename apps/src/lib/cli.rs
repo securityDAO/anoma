@@ -1273,6 +1273,7 @@ pub mod args {
     const MATCHMAKER_PATH: ArgOpt<PathBuf> = arg_opt("matchmaker-path");
     const MODE: ArgOpt<String> = arg_opt("mode");
     const MULTIADDR_OPT: ArgOpt<Multiaddr> = arg_opt("address");
+    const NET_ADDRESS: Arg<SocketAddr> = arg("net-address");
     const NODE_OPT: ArgOpt<String> = arg_opt("node");
     const NODE: Arg<String> = arg("node");
     const NFT_ADDRESS: Arg<Address> = arg("nft-address");
@@ -2615,21 +2616,29 @@ pub mod args {
     #[derive(Clone, Debug)]
     pub struct InitGenesisValidator {
         pub alias: String,
+        pub net_address: SocketAddr,
         pub unsafe_dont_encrypt: bool,
     }
 
     impl Args for InitGenesisValidator {
         fn parse(matches: &ArgMatches) -> Self {
             let alias = ALIAS.parse(matches);
+            let net_address = NET_ADDRESS.parse(matches);
             let unsafe_dont_encrypt = UNSAFE_DONT_ENCRYPT.parse(matches);
             Self {
                 alias,
+                net_address,
                 unsafe_dont_encrypt,
             }
         }
 
         fn def(app: App) -> App {
             app.arg(ALIAS.def().about("The validator address alias."))
+                .arg(NET_ADDRESS.def().about(
+                    "Static {host:port} of your validator node's P2P address. \
+                     Anoma uses port `26656` for P2P connections by default, \
+                     but you can configure a different value.",
+                ))
                 .arg(UNSAFE_DONT_ENCRYPT.def().about(
                     "UNSAFE: Do not encrypt the generated keypairs. Do not \
                      use this for keys used in a live network.",
