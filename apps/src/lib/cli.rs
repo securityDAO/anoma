@@ -2534,7 +2534,7 @@ pub mod args {
         fn def(app: App) -> App {
             app.arg(CHAIN_ID.def().about("The chain ID. The chain must be known in the https://github.com/heliaxdev/anoma-network-config repository."))
                 .arg(GENESIS_VALIDATOR.def().about("The alias of the genesis validator that you want to set up as, if any."))
-                .arg(PRE_GENESIS_PATH.def().about("The path to pre-genesis for genesis validator, if any. Defaults to \"{base-dir}/pregenesis/{genesis-validator}\"."))
+                .arg(PRE_GENESIS_PATH.def().about("The path to pre-genesis for genesis validator, if any. Defaults to \"{base-dir}/pre-genesis/{genesis-validator}\"."))
         }
     }
 

@@ -47,8 +47,8 @@ pub const ENV_VAR_NETWORK_CONFIGS_SERVER: &str = "ANOMA_NETWORK_CONFIGS_SERVER";
 const DEFAULT_NETWORK_CONFIGS_SERVER: &str =
     "https://github.com/heliaxdev/anoma-network-config/releases/download";
 
-/// We do pregenesis validator set up in this directory
-pub const PREGENESIS_DIR: &str = "pregenesis";
+/// We do pre-genesis validator set up in this directory
+pub const PRE_GENESIS_DIR: &str = "pre-genesis";
 
 /// Configure Anoma to join an existing network. The chain must be released in
 /// the <https://github.com/heliaxdev/anoma-network-config> repository.
@@ -1192,10 +1192,10 @@ fn write_tendermint_node_key(
 
 /// The default path to a validator pre-genesis file.
 pub fn validator_pre_genesis_file(pre_genesis_path: &Path) -> PathBuf {
-    pre_genesis_path.join("pre-genesis.toml")
+    pre_genesis_path.join("validator.toml")
 }
 
 /// The default validator pre-genesis directory
 pub fn validator_pre_genesis_dir(base_dir: &Path, alias: &str) -> PathBuf {
-    base_dir.join(PREGENESIS_DIR).join(alias)
+    base_dir.join(PRE_GENESIS_DIR).join(alias)
 }
