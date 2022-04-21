@@ -21,6 +21,7 @@ wasms += vp_nft
 wasms += vp_testnet_faucet
 wasms += vp_token
 wasms += vp_user
+wasms += vp_eth_bridge
 
 # Build all wasms
 all: $(wasms)
