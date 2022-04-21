@@ -62,36 +62,105 @@ pub async fn join_network(
 ) {
     use tokio::fs;
 
-    let base_dir = &global_args.base_dir;
+    let base_dir = global_args.base_dir;
 
-    // TODO: Instead of checking pre-genesis file, we can pre-load the validator
-    // pre-genesis wallet and its keys and then write them out after we d/l the
-    // network archive
-    if let Some(validator_alias) = &genesis_validator {
-        let pre_genesis_dir = pre_genesis_path.clone().unwrap_or_else(|| {
-            validator_pre_genesis_dir(&global_args.base_dir, validator_alias)
+    // If the base-dir doesn't exist yet, create it
+    if let Err(err) = fs::canonicalize(&base_dir).await {
+        if err.kind() == std::io::ErrorKind::NotFound {
+            fs::create_dir_all(&base_dir).await.unwrap();
+        }
+    } else {
+        // If the base-dir exists, check if it's already got this chain ID
+        if fs::canonicalize(base_dir.join(chain_id.as_str()))
+            .await
+            .is_ok()
+        {
+            eprintln!("The chain directory for {} already exists.", chain_id);
+            cli::safe_exit(1);
+        }
+    }
+    let base_dir_full = fs::canonicalize(&base_dir).await.unwrap();
+    let cwd = env::current_dir().unwrap();
+    let chain_dir = base_dir_full.join(chain_id.as_str());
+
+    let validator_alias_and_dir = pre_genesis_path
+        .and_then(|path| {
+            let alias = path.components().last()?;
+            match alias {
+                std::path::Component::Normal(alias) => {
+                    let alias = alias.to_string_lossy().to_string();
+                    println!(
+                        "Using {alias} parsed from the given \
+                         --pre-genesis-path"
+                    );
+                    Some((alias, path))
+                }
+                _ => None,
+            }
+        })
+        .or_else(|| {
+            genesis_validator.as_ref().map(|alias| {
+                (
+                    alias.clone(),
+                    validator_pre_genesis_dir(&base_dir_full, alias),
+                )
+            })
         });
 
-        // Check that there's a validator pre-genesis config for the given alias
-        let file_path = validator_pre_genesis_file(&pre_genesis_dir);
-        let config =
-            fs::read_to_string(&file_path).await.unwrap_or_else(|err| {
+    // Pre-load the validator pre-genesis wallet and its keys to validate that
+    // everything is in place before downloading the network archive
+    let validator_keys = if let Some((validator_alias, pre_genesis_dir)) =
+        validator_alias_and_dir
+    {
+        let mut pre_genesis_wallet = Wallet::load(&pre_genesis_dir)
+            .unwrap_or_else(|| {
                 eprintln!(
-                    "Couldn't find pre-genesis validator configuration with \
-                     alias {validator_alias} at {}. Failed with {err}.",
-                    file_path.to_string_lossy()
+                    "No pre-genesis wallet found in {}",
+                    pre_genesis_dir.to_string_lossy()
                 );
                 cli::safe_exit(1)
             });
-        let _validator_config: ValidatorPreGenesisConfig =
-            toml::from_str(&config).unwrap_or_else(|err| {
-                eprintln!(
-                    "Couldn't decode pre-genesis validator configuration with \
-                     alias {validator_alias}. Failed with {err}."
-                );
+
+        let alias = validator_key_alias(&validator_alias);
+        pre_genesis_wallet.find_key(&alias).unwrap_or_else(|_err| {
+            eprintln!("Missing validator key with alias {}", alias);
+            cli::safe_exit(1)
+        });
+
+        let alias = consensus_key_alias(&validator_alias);
+        let consensus_key =
+            pre_genesis_wallet.find_key(&alias).unwrap_or_else(|_err| {
+                eprintln!("Missing consensus key with alias {}", alias);
                 cli::safe_exit(1)
             });
-    }
+
+        let alias = rewards_key_alias(&validator_alias);
+        pre_genesis_wallet.find_key(&alias).unwrap_or_else(|_err| {
+            eprintln!("Missing rewards key with alias {}", alias);
+            cli::safe_exit(1)
+        });
+
+        let alias = tendermint_node_key_alias(&validator_alias);
+        let tendermint_node_key =
+            pre_genesis_wallet.find_key(&alias).unwrap_or_else(|_err| {
+                eprintln!("Missing validator key with alias {}", alias);
+                cli::safe_exit(1)
+            });
+
+        let tendermint_node_key: ed25519::SecretKey =
+            tendermint_node_key.try_to_sk().unwrap_or_else(|_err| {
+                eprintln!("Tendermint node key must be ed25519");
+                cli::safe_exit(1)
+            });
+        Some((
+            validator_alias,
+            pre_genesis_wallet,
+            consensus_key,
+            tendermint_node_key,
+        ))
+    } else {
+        None
+    };
 
     let wasm_dir = global_args.wasm_dir.as_ref().cloned().or_else(|| {
         if let Ok(wasm_dir) = env::var(ENV_VAR_WASM_DIR) {
@@ -110,22 +179,6 @@ pub async fn join_network(
             cli::safe_exit(1);
         }
     }
-    if let Err(err) = fs::canonicalize(base_dir).await {
-        if err.kind() == std::io::ErrorKind::NotFound {
-            // If the base-dir doesn't exist yet, create it
-            fs::create_dir_all(base_dir).await.unwrap();
-        }
-    } else {
-        // If the base-dir exists, check if it's already got this chain ID
-        if fs::canonicalize(base_dir.join(chain_id.as_str()))
-            .await
-            .is_ok()
-        {
-            eprintln!("The chain directory for {} already exists.", chain_id);
-            cli::safe_exit(1);
-        }
-    }
-    let base_dir_full = fs::canonicalize(base_dir).await.unwrap();
 
     let release_filename = format!("{}.tar.gz", chain_id);
     let release_url = format!(
@@ -133,7 +186,6 @@ pub async fn join_network(
         network_configs_url_prefix(&chain_id),
         release_filename
     );
-    let cwd = env::current_dir().unwrap();
 
     // Read or download the release archive
     println!("Downloading config release from {} ...", release_url);
@@ -155,7 +207,6 @@ pub async fn join_network(
         };
     archive.unpack(&unpack_dir).unwrap();
 
-    let chain_dir = base_dir_full.join(chain_id.as_str());
     // Rename the base-dir from the default and rename wasm-dir, if non-default.
     if non_default_dir {
         // For compatibility for networks released with Anoma <= v0.4:
@@ -242,8 +293,14 @@ pub async fn join_network(
         }
     }
 
-    if let Some(validator_alias) = genesis_validator {
-        // Setup the node for a validator
+    // Setup the node for a genesis validator, if used
+    if let Some((
+        validator_alias,
+        pre_genesis_wallet,
+        consensus_key,
+        tendermint_node_key,
+    )) = validator_keys
+    {
         let genesis_file_path =
             base_dir.join(format!("{}.toml", chain_id.as_str()));
         let mut wallet =
@@ -261,50 +318,6 @@ pub async fn join_network(
                 cli::safe_exit(1)
             })
             .clone();
-
-        let pre_genesis_dir = pre_genesis_path.unwrap_or_else(|| {
-            validator_pre_genesis_dir(base_dir, &validator_alias)
-        });
-        let mut pre_genesis_wallet = Wallet::load(&pre_genesis_dir)
-            .unwrap_or_else(|| {
-                eprintln!(
-                    "No pre-genesis wallet found in {}",
-                    pre_genesis_dir.to_string_lossy()
-                );
-                cli::safe_exit(1)
-            });
-
-        let alias = validator_key_alias(&validator_alias);
-        pre_genesis_wallet.find_key(&alias).unwrap_or_else(|_err| {
-            eprintln!("Missing validator key with alias {}", alias);
-            cli::safe_exit(1)
-        });
-
-        let alias = consensus_key_alias(&validator_alias);
-        let consensus_key =
-            pre_genesis_wallet.find_key(&alias).unwrap_or_else(|_err| {
-                eprintln!("Missing consensus key with alias {}", alias);
-                cli::safe_exit(1)
-            });
-
-        let alias = rewards_key_alias(&validator_alias);
-        pre_genesis_wallet.find_key(&alias).unwrap_or_else(|_err| {
-            eprintln!("Missing rewards key with alias {}", alias);
-            cli::safe_exit(1)
-        });
-
-        let alias = tendermint_node_key_alias(&validator_alias);
-        let tendermint_node_key =
-            pre_genesis_wallet.find_key(&alias).unwrap_or_else(|_err| {
-                eprintln!("Missing validator key with alias {}", alias);
-                cli::safe_exit(1)
-            });
-
-        let tendermint_node_key: ed25519::SecretKey =
-            tendermint_node_key.try_to_sk().unwrap_or_else(|_err| {
-                eprintln!("Tendermint node key must be ed25519");
-                cli::safe_exit(1)
-            });
 
         let tm_home_dir = chain_dir.join("tendermint");
 
@@ -345,6 +358,7 @@ pub async fn join_network(
         .await
         .unwrap();
     }
+
     println!("Successfully configured for chain ID {}", chain_id);
 }
 
@@ -1019,6 +1033,7 @@ pub fn init_genesis_validator(
     global_args: args::Global,
     args::InitGenesisValidator {
         alias,
+        net_address,
         unsafe_dont_encrypt,
     }: args::InitGenesisValidator,
 ) {
@@ -1077,13 +1092,11 @@ pub fn init_genesis_validator(
                 tendermint_node_key: Some(HexString(
                     tendermint_node_key.ref_to().to_string(),
                 )),
+                net_address: Some(net_address.to_string()),
                 ..Default::default()
             },
         )]),
     };
-    // this prints the validator block in the same way as the genesis config
-    // TOML would look like
-
     let genesis_part = toml::to_string(&validator_config).unwrap();
     println!("Your public partial pre-genesis TOML configuration:");
     println!();

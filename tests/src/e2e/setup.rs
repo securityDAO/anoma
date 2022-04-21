@@ -21,7 +21,7 @@ use tempfile::{tempdir, TempDir};
 
 /// For `color_eyre::install`, which fails if called more than once in the same
 /// process
-static INIT: Once = Once::new();
+pub static INIT: Once = Once::new();
 
 const APPS_PACKAGE: &str = "anoma_apps";
 

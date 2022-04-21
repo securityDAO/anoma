@@ -983,6 +983,12 @@ fn ledger_many_txs_in_a_block() -> Result<()> {
 fn test_genesis_validators() -> Result<()> {
     // This test is not using the `setup::network`, because we're setting up
     // custom genesis validators
+    setup::INIT.call_once(|| {
+        if let Err(err) = color_eyre::install() {
+            eprintln!("Failed setting up colorful error reports {}", err);
+        }
+    });
+
     let working_dir = setup::working_dir();
     let base_dir = tempdir().unwrap();
     let checksums_path = working_dir
@@ -990,9 +996,22 @@ fn test_genesis_validators() -> Result<()> {
         .to_string_lossy()
         .into_owned();
 
-    if let Err(err) = color_eyre::install() {
-        eprintln!("Failed setting up colorful error reports {}", err);
-    }
+    // Same as in `genesis/e2e-tests-single-node.toml` for `validator-0`
+    let net_address_0 = SocketAddr::from_str("127.0.0.1:27656").unwrap();
+    let net_address_port_0 = net_address_0.port();
+    // Find the first port (ledger P2P) that should be used for a validator at
+    // the given index
+    let get_first_port = |ix: u8| {
+        net_address_port_0
+            + 6 * (ix as u16 + 1)
+            + if cfg!(feature = "ABCI") {
+                0
+            } else {
+                // The ABCI++ ports at `26670 + ABCI_PLUS_PLUS_PORT_OFFSET`,
+                // see `network`
+                setup::ABCI_PLUS_PLUS_PORT_OFFSET
+            }
+    };
 
     // 1. Setup 2 genesis validators
     let validator_0_alias = "validator-0";
@@ -1006,6 +1025,8 @@ fn test_genesis_validators() -> Result<()> {
             "--unsafe-dont-encrypt",
             "--alias",
             validator_0_alias,
+            "--net-address",
+            &format!("127.0.0.1:{}", get_first_port(0)),
         ],
         Some(5),
         &working_dir,
@@ -1040,6 +1061,8 @@ fn test_genesis_validators() -> Result<()> {
             "--unsafe-dont-encrypt",
             "--alias",
             validator_1_alias,
+            "--net-address",
+            &format!("127.0.0.1:{}", get_first_port(1)),
         ],
         Some(5),
         &working_dir,
@@ -1070,9 +1093,6 @@ fn test_genesis_validators() -> Result<()> {
     let mut genesis = genesis_config::open_genesis_config(
         working_dir.join(setup::SINGLE_NODE_NET_GENESIS),
     );
-    // Same as in `genesis/e2e-tests-single-node.toml`
-    let net_address_0 = SocketAddr::from_str("127.0.0.1:27656").unwrap();
-    let net_address_port_0 = net_address_0.port();
     let update_validator_config =
         |ix: u8, mut config: genesis_config::ValidatorConfig| {
             // Setup tokens balances and validity predicates
@@ -1084,15 +1104,7 @@ fn test_genesis_validators() -> Result<()> {
             // `setup::add_validators` would do
             let mut net_address = net_address_0;
             // 6 ports for each validator
-            let first_port = net_address_port_0
-                + 6 * (ix as u16 + 1)
-                + if cfg!(feature = "ABCI") {
-                    0
-                } else {
-                    // The ABCI++ ports at `26670 + ABCI_PLUS_PLUS_PORT_OFFSET`,
-                    // see `network`
-                    setup::ABCI_PLUS_PLUS_PORT_OFFSET
-                };
+            let first_port = get_first_port(ix);
             net_address.set_port(first_port);
             config.net_address = Some(net_address.to_string());
             config
@@ -1185,8 +1197,6 @@ fn test_genesis_validators() -> Result<()> {
             "join-network",
             "--chain-id",
             chain_id.as_str(),
-            "--genesis-validator",
-            validator_0_alias,
             "--pre-genesis-path",
             pre_genesis_path.as_ref(),
         ],
@@ -1204,8 +1214,6 @@ fn test_genesis_validators() -> Result<()> {
             "join-network",
             "--chain-id",
             chain_id.as_str(),
-            "--genesis-validator",
-            validator_1_alias,
             "--pre-genesis-path",
             pre_genesis_path.as_ref(),
         ],
