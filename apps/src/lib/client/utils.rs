@@ -1061,7 +1061,7 @@ pub fn init_genesis_validator(
 
     let validator_config = genesis_config::ValidatorPreGenesisConfig {
         validator: HashMap::from_iter([(
-            alias.clone(),
+            alias,
             genesis_config::ValidatorConfig {
                 consensus_public_key: Some(HexString(
                     consensus_key.ref_to().to_string(),
